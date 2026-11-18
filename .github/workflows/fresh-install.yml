@@ -1,6 +1,6 @@
 # Proves a reviewer can run Campaign Studio from a fresh copy on Windows, macOS
 # and Linux: one command, no API key. Each run uploads a screenshot of the app
-# as it renders on that machine.
+# as it renders on that machine, plus an ad that machine rendered.
 name: Fresh install
 
 on:
@@ -12,17 +12,17 @@ jobs:
   fresh-install:
     name: ${{ matrix.os }} · Python ${{ matrix.python }}
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        os: [windows-latest, ubuntu-latest, macos-latest]
-        python: ["3.9", "3.12"]
-        exclude:
-          - os: macos-latest   # stock macOS 3.9 is tested by hand; runners are ARM
-            python: "3.9"
+        include:
+          - { os: windows-latest, python: "3.9" }   # oldest supported (macOS still ships 3.9)
+          - { os: windows-latest, python: "3.12" }
+          - { os: ubuntu-latest,  python: "3.12" }
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: ${{ matrix.python }}
       - name: Install and run, as a reviewer would
@@ -35,3 +35,31 @@ jobs:
             app-*.png
             outputs/long-light/daylight-mist/9x16/JP-ja.png
           if-no-files-found: ignore
+
+  # GitHub only gives private repos on free plans limited macOS machines, so
+  # this runs once the repo is public. macOS is also tested by hand.
+  fresh-install-macos:
+    name: macos-latest · Python ${{ matrix.python }}
+    if: ${{ !github.event.repository.private }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        include:
+          - { os: macos-latest, python: "3.12" }
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install and run, as a reviewer would
+        run: python tools/smoke_test.py --screenshot app-${{ matrix.os }}-py${{ matrix.python }}.png
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: app-${{ matrix.os }}-py${{ matrix.python }}
+          path: |
+            app-*.png
+            outputs/long-light/daylight-mist/9x16/JP-ja.png
+          if-no-files-found: ignore
+

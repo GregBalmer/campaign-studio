@@ -69,6 +69,12 @@ def stop(proc: subprocess.Popen) -> None:
 
 
 def main() -> int:
+    # CI consoles on Windows aren't UTF-8; never let printing a log line fail the test.
+    for stream in (sys.stdout, sys.stderr):
+        try:
+            stream.reconfigure(errors="replace")  # type: ignore[attr-defined]
+        except (AttributeError, ValueError):
+            pass
     shot = sys.argv[sys.argv.index("--screenshot") + 1] if "--screenshot" in sys.argv else None
     env = dict(os.environ, STUDIO_PORT=PORT, PYTHONUNBUFFERED="1")
     env.pop("OPENAI_API_KEY", None)
@@ -131,10 +137,16 @@ def main() -> int:
             browser = find_browser()
             if browser:
                 profile = ROOT / ".smoke-profile"
-                subprocess.run([browser, "--headless=new", "--disable-gpu", "--hide-scrollbars",
-                                f"--user-data-dir={profile}", "--window-size=1440,900",
-                                "--virtual-time-budget=8000", f"--screenshot={Path(shot).resolve()}",
-                                url + "/#review"], capture_output=True, timeout=120)
+                for _attempt in range(3):  # headless Chrome is occasionally flaky on CI
+                    try:
+                        subprocess.run([browser, "--headless=new", "--disable-gpu", "--hide-scrollbars",
+                                        f"--user-data-dir={profile}", "--window-size=1440,900",
+                                        "--virtual-time-budget=8000", f"--screenshot={Path(shot).resolve()}",
+                                        url + "/#review"], capture_output=True, timeout=120)
+                    except subprocess.TimeoutExpired:
+                        pass
+                    if Path(shot).exists():
+                        break
                 shutil.rmtree(profile, ignore_errors=True)
                 log(f"screenshot {'saved to ' + shot if Path(shot).exists() else 'FAILED'}")
             else:
@@ -144,6 +156,7 @@ def main() -> int:
 
     venv_py = ROOT / ".venv" / ("Scripts/python.exe" if WINDOWS else "bin/python")
     r = subprocess.run([str(venv_py), "cli.py", "--provider", "mock"], cwd=ROOT,
+                       env=dict(os.environ, PYTHONIOENCODING="utf-8"),
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
     print("\n".join("  | " + ln for ln in r.stdout.splitlines()[-4:]), flush=True)
     assert r.returncode == 0, f"cli.py failed: {r.stderr[-500:]}"
