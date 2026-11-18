@@ -79,17 +79,20 @@ export default function ReviewStep() {
       </div>
 
       <div className="review-bar">
-        <div className="stat"><b>{counts.total}</b><span>ads</span></div>
-        <div className="stat"><b style={{ color: counts.attention ? "var(--warn)" : undefined }}>{counts.attention}</b><span>need a look</span></div>
-        <div className="stat"><b style={{ color: "var(--ok)" }}>{counts.approved}</b><span>approved</span></div>
-        <div className="stat"><b>{open}</b><span>to review</span></div>
+        {([
+          ["all", counts.total, counts.total === 1 ? "ad" : "ads", undefined],
+          ["attention", counts.attention, "need a look", counts.attention ? "var(--warn)" : undefined],
+          ["open", open, "to review", undefined],
+          ["approved", counts.approved, "approved", counts.approved ? "var(--ok)" : undefined],
+          ["rejected", counts.rejected, "rejected", counts.rejected ? "var(--fail)" : undefined],
+        ] as const).map(([k, n, label, color]) => (
+          <button key={k} className={`stat ${filter === k ? "on" : ""}`} aria-pressed={filter === k}
+            onClick={() => setFilter(filter === k ? "all" : k)} title={k === "all" ? "Show every ad" : `Show only ads that ${label === "need a look" ? "need a look" : `are ${label}`}`}>
+            <b style={{ color }}>{n}</b><span>{label}</span>
+          </button>
+        ))}
         <span className="space" />
         {building && <span className="row muted small"><Loader2 size={15} className="spin" /> Updating…</span>}
-        <div className="seg">
-          {([["all", "All"], ["attention", "Needs a look"], ["open", "To review"], ["approved", "Approved"], ["rejected", "Rejected"]] as const).map(([k, l]) => (
-            <button key={k} className={filter === k ? "on" : ""} onClick={() => setFilter(k)}>{l}</button>
-          ))}
-        </div>
         <Button kind="approve" icon={<CheckCheck size={17} />} disabled={!passingOpen.length} busy={busy.has("bulk")} onClick={approveAllPassing}>
           Approve all that pass ({passingOpen.length})
         </Button>
@@ -119,7 +122,13 @@ export default function ReviewStep() {
           </section>
         );
       })}
-      {shown.length === 0 && <div className="empty">Nothing here.</div>}
+      {shown.length === 0 && (
+        <div className="empty">
+          {{ all: "No ads yet.", attention: "Nothing needs a look. Every ad passed its checks.", open: "Nothing left to review.",
+             approved: "No ads approved yet.", rejected: "No ads rejected." }[filter]}
+          {filter !== "all" && <><br /><button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setFilter("all")}>Show all ads</button></>}
+        </div>
+      )}
 
       <p className="muted small" style={{ marginTop: 40, display: "flex", gap: 8, alignItems: "center" }}>
         <FolderOpen size={15} /> Also saved on this computer in <code>outputs/{view.id}/</code>, by product and size, with <code>report.json</code>.
