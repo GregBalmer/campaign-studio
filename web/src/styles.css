@@ -53,38 +53,45 @@ img { display: block; max-width: 100%; }
   box-shadow: inset 0 3px 0 var(--adobe), var(--bar-shadow);
   border-bottom: 1px solid var(--bar-line);
 }
-/* Text in the left cluster shares one baseline; the mark and divider sit centred. */
-.topbar-left { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
-.topbar-left > .wordmark-mark, .topbar-left > .divider-v { align-self: center; }
+.topbar-left { display: flex; align-items: center; gap: 12px; min-width: 0; }
 .wordmark { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
 .wordmark-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--adobe); display: grid; place-items: center; flex: none; margin-right: -2px; }
 .topbar .spacer { flex: 1; }
-.divider-v { width: 1px; height: 20px; background: var(--bar-line-strong); margin: 0 2px; }
 
+/* The campaign's own strip: where you are, what you're working on, its numbers, its steps. */
+.camphead { background: var(--surface); border-bottom: 1px solid var(--line); }
+.camphead-inner { max-width: 1240px; margin: 0 auto; padding: 18px 28px; }
+.camphead-row { display: flex; align-items: center; justify-content: space-between; gap: 32px; }
+.camphead-title { flex: 1; min-width: 0; }
 .campaign-slot { position: relative; }
 .campaign-switch {
-  display: inline-flex; align-items: baseline; gap: 8px;
-  padding: 6px 8px; margin: -6px -8px; border-radius: 9px; border: 0; background: transparent; cursor: pointer; color: inherit;
+  display: inline-flex; align-items: center; gap: 8px; max-width: 100%;
+  padding: 4px 8px; margin: -4px -8px; border-radius: 9px; border: 0; background: transparent; cursor: pointer; color: inherit;
 }
-.campaign-switch:hover { background: var(--bar-hover); }
-.campaign-label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--bar-ink-3); }
-.campaign-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
-.campaign-switch .badge { align-self: center; }
-.campaign-chevron { align-self: center; }
+.campaign-switch:hover { background: var(--hover); }
+.campaign-name { font-size: 24px; line-height: 1.2; font-weight: 650; letter-spacing: -0.02em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.campaign-chevron { flex: none; color: var(--ink-3); margin-top: 3px; }
+.campaign-switch .badge { margin-left: 4px; flex: none; }
+.camphead-title .campaign-slot { display: flex; align-items: center; gap: 20px; }
+.new-campaign {
+  display: inline-flex; align-items: center; gap: 6px; height: 32px; padding: 0 12px; border-radius: 999px; flex: none;
+  border: 1px solid var(--line-strong); background: var(--surface); cursor: pointer; font-size: 13.5px; font-weight: 550; color: var(--ink-2);
+}
+.new-campaign:hover { border-color: var(--ink-3); color: var(--ink); }
+.camp-stats { display: flex; gap: 40px; margin: 0; }
+.camp-stat { display: flex; flex-direction: column; align-items: flex-end; text-align: right; }
+.camp-stat dd { margin: 0; font-size: 24px; line-height: 1.15; font-weight: 350; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.camp-stat dt { font-size: 10.5px; line-height: 1.2; font-weight: 500; letter-spacing: 0.1em; text-transform: uppercase; color: var(--ink-3); }
 
+/* App-level places are plain text links; the avatar is the only shape. */
 .topbar-right { display: flex; align-items: center; gap: 6px; }
-.bar-text {
-  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px; border-radius: 9px;
-  border: 0; background: transparent; cursor: pointer; font-size: 13px; font-weight: 550; color: inherit;
+.bar-link {
+  height: 34px; padding: 0 12px; border: 0; border-radius: 8px; background: transparent; cursor: pointer;
+  font-size: 12.5px; font-weight: 500; letter-spacing: 0.09em; text-transform: uppercase; color: var(--bar-ink-2);
 }
-.bar-text .muted { color: var(--bar-ink-3); font-weight: 500; }
-.bar-icon {
-  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
-  border: 0; background: transparent; cursor: pointer; color: var(--bar-ink-2);
-}
-.bar-text:hover, .bar-icon:hover { background: var(--bar-hover); color: var(--bar-ink); }
+.bar-link:hover { color: var(--bar-ink); background: var(--bar-hover); }
 .avatar {
-  width: 32px; height: 32px; border-radius: 50%; margin-left: 4px; border: 0; cursor: pointer;
+  width: 34px; height: 34px; border: 0; border-radius: 50%; cursor: pointer; margin-left: 8px;
   display: grid; place-items: center; font-size: 12px; font-weight: 650; letter-spacing: 0.02em;
   background: var(--bar-avatar); color: var(--bar-avatar-ink);
 }
@@ -108,12 +115,11 @@ img { display: block; max-width: 100%; }
   --bar-shadow: 0 8px 24px rgba(23, 23, 27, 0.12);
   --bar-avatar: #f4f3f0; --bar-avatar-ink: #17171b;
 }
-.topbar .badge { background: rgba(255, 255, 255, 0.12); color: #e9e8e4; }
 
 /* ---------------------------------------------------------------- stepper */
 .stepper {
   display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;
-  max-width: 1240px; margin: 28px auto 0; padding: 0 28px;
+  max-width: 1240px; margin: 24px auto 0; padding: 0 28px;
 }
 .step {
   position: relative; display: flex; align-items: center; gap: 12px;
@@ -494,6 +500,9 @@ a.btn { text-decoration: none; }
 
 @media (max-width: 860px) {
   .topbar { padding: 0 16px; }
+  .camphead-inner { padding: 14px 16px; }
+  .camp-stats { display: none; }
+  .campaign-name { font-size: 20px; }
   .stepper { grid-template-columns: repeat(4, auto); overflow-x: auto; padding: 0 16px; }
   .step-sub { display: none; }
   .page { padding: 20px 16px 120px; }
@@ -502,7 +511,6 @@ a.btn { text-decoration: none; }
 }
 
 .badge.adobe { background: var(--adobe-bg); color: var(--adobe); }
-.option.firefly { border-style: dashed; }
 
 .menu-heading { padding: 10px 10px 4px; font-size: 11.5px; font-weight: 650; letter-spacing: 0.02em; text-transform: uppercase; color: var(--ink-3); }
 .menu-heading .muted { text-transform: none; font-weight: 500; letter-spacing: 0; }
@@ -547,3 +555,20 @@ a.btn { text-decoration: none; }
 .user-menu-head b { display: block; }
 .signin-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
 .tagline { font-size: 12.5px; font-weight: 500; color: var(--ink-3); padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--line-strong); white-space: nowrap; }
+
+/* ---------------------------------------------------------------- settings */
+.option-group { margin-top: 24px; }
+.option-group h3 { margin: 0 0 2px; font-size: 13px; font-weight: 650; letter-spacing: 0.04em; text-transform: uppercase; color: var(--ink-3); }
+/* A service that still needs credentials: the row opens its own short form. */
+.option.connectable { display: block; padding: 0; cursor: default; }
+.option.connectable.open { border-color: var(--ink-3); }
+.option-head { display: flex; gap: 14px; align-items: flex-start; width: 100%; padding: 14px; border: 0; background: transparent; cursor: pointer; text-align: left; border-radius: 13px; }
+.option-head:hover .connect-link { text-decoration: underline; }
+.option-head > span:nth-child(2) { flex: 1; min-width: 0; }
+.connect-link { flex: none; align-self: center; font-size: 13.5px; font-weight: 620; color: var(--ink); }
+.connect-form { padding: 2px 14px 14px 46px; display: flex; flex-direction: column; gap: 10px; }
+.connect-form .label { margin-bottom: -4px; }
+.connect-note { margin: 0; font-size: 12.5px; color: var(--ink-3); line-height: 1.45; }
+.connect-form details { font-size: 12.5px; color: var(--ink-2); line-height: 1.5; }
+.connect-form summary { cursor: pointer; color: var(--ink-2); font-weight: 600; }
+.connect-form ol { margin: 6px 0 0; padding-left: 18px; }

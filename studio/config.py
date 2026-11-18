@@ -74,3 +74,48 @@ def image_model() -> str:
 
 def text_model() -> str:
     return os.environ.get("STUDIO_TEXT_MODEL", "").strip() or DEFAULT_TEXT_MODEL
+
+
+# ---------------------------------------------------------------- Adobe Firefly
+FIREFLY_IMS = "https://ims-na1.adobelogin.com"
+FIREFLY_API = "https://firefly-api.adobe.io"
+FIREFLY_SCOPES = "openid,AdobeID,session,additional_info,read_organizations,firefly_api,ff_apis"
+
+
+def _env(name: str) -> str:
+    return os.environ.get(name, "").strip()
+
+
+def firefly_client_id() -> str | None:
+    return _env("FIREFLY_CLIENT_ID") or None
+
+
+def firefly_client_secret() -> str | None:
+    return _env("FIREFLY_CLIENT_SECRET") or None
+
+
+def firefly_ready() -> bool:
+    return bool(firefly_client_id() and firefly_client_secret())
+
+
+def firefly_model_version() -> str | None:
+    """Sent as x-model-version when set; left out otherwise so Adobe picks."""
+    return _env("FIREFLY_MODEL_VERSION") or None
+
+
+def firefly_scopes() -> str:
+    return _env("FIREFLY_SCOPES") or FIREFLY_SCOPES
+
+
+def firefly_ims_url() -> str:
+    return (_env("FIREFLY_IMS_URL") or FIREFLY_IMS).rstrip("/")
+
+
+def firefly_api_url() -> str:
+    return (_env("FIREFLY_API_URL") or FIREFLY_API).rstrip("/")
+
+
+def firefly_test_mode() -> bool:
+    """True when either address is overridden, which only tests do. Anything
+    made in this mode is labelled as coming from a test server, never Adobe."""
+    return bool(_env("FIREFLY_IMS_URL") or _env("FIREFLY_API_URL"))

@@ -3,6 +3,7 @@
     python3 cli.py                       # the sample campaign, demo images
     python3 cli.py long-light --provider openai
     python3 cli.py path/to/brief.json --provider mock
+    python3 cli.py --images firefly --translation openai
 
 It uses the same functions as the app. Approvals are recorded as "cli", so the
 report shows clearly that no person reviewed these frames.
@@ -34,8 +35,12 @@ def main() -> int:
     ap = argparse.ArgumentParser(description="Generate campaign creatives from a brief.")
     ap.add_argument("campaign", nargs="?", default="long-light",
                     help="a campaign id in workspace/ (default: long-light), or a path to brief.json")
+    ap.add_argument("--images", choices=["mock", "openai", "firefly"], default=None,
+                    help="who makes the images (default: openai if a key is set, else mock)")
+    ap.add_argument("--translation", choices=["mock", "openai"], default=None,
+                    help="who translates the message (default: openai if a key is set, else mock)")
     ap.add_argument("--provider", choices=["mock", "openai"], default=None,
-                    help="image and translation provider (default: openai if a key is set, else mock)")
+                    help="shorthand that sets both --images and --translation")
     args = ap.parse_args()
 
     pipeline.ensure_samples()
@@ -56,12 +61,14 @@ def main() -> int:
     else:
         cid = args.campaign
 
-    provider = args.provider or providers.default_name()
+    images = args.images or args.provider or providers.default_name("image")
+    translation = args.translation or args.provider or providers.default_name("text")
     by = "cli"
     try:
-        pipeline.with_campaign(cid, lambda c: c.set_provider(provider))
+        pipeline.with_campaign(cid, lambda c: (c.set_provider("image", images), c.set_provider("text", translation)))
         c = pipeline.Campaign(cid)
-        print(f"Campaign: {c.brief['campaign']}  ·  provider: {provider}")
+        print(f"Campaign: {c.brief['campaign']}  ·  images: {c.state['image_provider']}"
+              f"  ·  translation: {c.state['text_provider']}")
         for p in c.brief["products"]:
             ps = pipeline.generate_master(cid, p["id"], by)
             how = "reused the supplied photo" if ps["origin"] == "supplied" else f"generated in {ps.get('seconds')}s"

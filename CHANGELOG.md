@@ -1,5 +1,14 @@
 # Changelog
 
+## v3: Firefly adapter
+
+- **An Adobe Firefly adapter.** Written to Adobe's published API (sign in, start a job, wait, download) and not yet run against a live account, which the code, the Models panel and README all say. Every request and every error message is proven against a stand-in server, offline, on every push (`tools/fake_firefly.py`, `tools/test_firefly.py`).
+- **Images and translation are chosen separately.** The Models panel has two groups, Images (Demo, OpenAI, Adobe Firefly) and Translation (Demo, OpenAI), because Firefly doesn't translate. Campaigns saved before the split keep their choice for both. The command line gains `--images` and `--translation`; `--provider` still sets both.
+- **Connect Firefly in the app.** Paste the client ID and secret under Models; they're checked with Adobe's sign-in and saved to `.env`. Firefly is never picked automatically.
+- **Nothing is called Firefly unless Adobe made it.** Pointed at the stand-in server, the app records images as `firefly-test` in the history and `report.json`, and the Models panel says it's pointing at a test server.
+- **`report.json` records who translated each line,** next to who made each image.
+- **A two-layer header.** A dark bar holds the app: its name, Models, History and your account. A light strip below holds the campaign: its name and its numbers (products, markets, ads, approved). The four steps sit under it.
+
 ## After v2
 
 - **New-market requests in one click.** The five-item checklist becomes one action: email the request, or post it to Slack when IT has connected a channel, or copy it for Teams or a ticket. The details fold away under "What's involved", and the market shows as Requested afterwards.

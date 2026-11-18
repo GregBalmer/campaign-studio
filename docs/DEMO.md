@@ -2,7 +2,7 @@
 
 The video has one job: show a reviewer they can run this themselves, then show what it does. Record at 1440×900, the browser full-screen, no cuts during setup.
 
-**Before recording:** in the app, open the campaign menu and choose **Start the sample over**. Have an OpenAI key ready in the app (Settings shows **OpenAI**). Clear the terminal.
+**Before recording:** in the app, open the campaign menu and choose **Start the sample over**. Have an OpenAI key ready in the app (**Models** shows **OpenAI**). Clear the terminal.
 
 | Time | Screen | Say |
 |---|---|---|
@@ -15,6 +15,6 @@ The video has one job: show a reviewer they can run this themselves, then show w
 | 1:30 | Message | "The line is adapted for Japan, not just translated, and here's what it means in English, so I can sign off without reading Japanese." Type a restricted word to show the flag, then undo. "Legal's restricted words are caught before anyone approves." Approve both. |
 | 1:55 | Review | "Twelve ads. Every one has been checked for legibility, logo, brand colours, restricted words, and whether the product is cropped or covered. Problems are marked on the ad itself." Open the flagged one. "It says what's wrong and how to fix it." |
 | 2:20 | Approve all that pass, then Download | "Approve, download. Everything's also on disk, organised by product and size, with a report of who approved what and when." |
-| 2:35 | Settings panel | "It runs on OpenAI or free demo images today. In production, Adobe Firefly plugs into the same slot with the client's own credentials, and nothing your team sees changes." |
+| 2:35 | Models panel | "Images and translation are chosen separately. It runs on OpenAI or free demo images today. Here's the Firefly adapter. It's one setting away: paste the client's own credentials and nothing your team sees changes. It's written to Adobe's documentation and proven against a stand-in server; I haven't had a live account to run it on." |
 
 **If anything fails on camera:** the app explains the error in plain words. That's worth keeping in the take.

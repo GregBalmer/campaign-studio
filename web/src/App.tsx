@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, History, LogOut, Plus, RotateCcw, X } from "lucide-react";
-import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderInfo, type View } from "./api";
+import { Check, ChevronDown, LogOut, Plus, RotateCcw, X } from "lucide-react";
+import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderLists, type View } from "./api";
 import { AppCtx, Button, Drawer, clock, useDismiss, type Ctx } from "./ui";
 import SignIn from "./SignIn";
 import BriefStep from "./steps/BriefStep";
@@ -33,7 +33,7 @@ function store(key: string, value?: string): string | null {
 export default function App() {
   const [view, setView] = useState<View | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
-  const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [providers, setProviders] = useState<ProviderLists>({ image: [], text: [] });
   const [slack, setSlack] = useState(false);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState<Set<string>>(new Set());
@@ -42,11 +42,11 @@ export default function App() {
   // undefined while checking; null when nobody is signed in.
   const [me, setMe] = useState<Person | null | undefined>(undefined);
   const [demo, setDemo] = useState<DemoAccount[]>([]);
-  const [panel, setPanel] = useState<"settings" | "history" | "campaigns" | "account" | null>(null);
+  const [panel, setPanel] = useState<"settings" | "history" | "campaigns" | "new-campaign" | "account" | null>(null);
   const toastTimer = useRef<number>();
   const switcher = useRef<HTMLDivElement>(null);
   const account = useRef<HTMLDivElement>(null);
-  useDismiss(switcher, panel === "campaigns", () => setPanel(null));
+  useDismiss(switcher, panel === "campaigns" || panel === "new-campaign", () => setPanel(null));
   useDismiss(account, panel === "account", () => setPanel(null));
 
   useEffect(() => {
@@ -180,7 +180,13 @@ export default function App() {
     allMasters && allCopy,
     Object.values(view.frames).length > 0 && Object.values(view.frames).every((f) => f.decision),
   ];
-  const provider = providers.find((p) => p.id === view.provider);
+  const frames = Object.values(view.frames);
+  const stats = [
+    { label: "Products", value: view.brief.products.length },
+    { label: "Markets", value: view.brief.markets.length },
+    { label: "Ads", value: view.brief.products.length * view.brief.markets.length * Object.keys(view.formats).length },
+    { label: "Approved", value: frames.filter((f) => f.decision?.value === "approved").length },
+  ];
 
   const ctx: Ctx = {
     view, setView, run, busy, reviewer, reviewerName, toast, slack, errors, retry, dismissError,
@@ -193,46 +199,16 @@ export default function App() {
 
   return (
     <AppCtx.Provider value={ctx}>
+      {/* Two layers: a dark bar for the app, and a light strip for the campaign being worked on. */}
       <header className="topbar">
         <div className="topbar-left">
           <span className="wordmark-mark"><AppMark /></span>
           <span className="wordmark">Campaign Studio</span>
-          <span className="divider-v" />
-          <div className="campaign-slot" ref={switcher}>
-            <button className="campaign-switch" aria-expanded={panel === "campaigns"} onClick={() => setPanel(panel === "campaigns" ? null : "campaigns")}>
-              <span className="campaign-label">Campaign</span>
-              <span className="campaign-name">{view.brief.campaign || "Untitled campaign"}</span>
-              {view.sample && <span className="badge">Sample</span>}
-              <ChevronDown size={15} className="muted campaign-chevron" />
-            </button>
-            {panel === "campaigns" && (
-              <CampaignMenu
-                campaigns={campaigns}
-                current={view.id}
-                sample={view.sample}
-                onPick={async (id) => { setPanel(null); await run("open", async () => { await open(id); }); }}
-                onNew={async (name) => {
-                  setPanel(null);
-                  await run("new", async () => { const v = await api.createCampaign(name); await refreshCampaigns(); setStep(0); return v; });
-                }}
-                onReset={async () => {
-                  setPanel(null);
-                  await run("reset", async () => { const v = await api.reset(view.id); setStep(0); toast("Sample reset to the start."); return v; });
-                }}
-                onClose={() => setPanel(null)}
-              />
-            )}
-          </div>
         </div>
         <div className="spacer" />
         <div className="topbar-right">
-          <button className="bar-text" onClick={() => setPanel("settings")} title="Image generator. Click to change.">
-            <span className={`dot ${view.provider === "openai" ? "ok" : "demo"}`} />
-            <span className="muted">Images</span> {provider?.label ?? view.provider}
-          </button>
-          <button className="bar-icon" onClick={() => setPanel("history")} title="History" aria-label="History">
-            <History size={18} />
-          </button>
+          <button className="bar-link" onClick={() => setPanel("settings")} title="Which services make the images and translate the message">Models</button>
+          <button className="bar-link" onClick={() => setPanel("history")} title="Who did what">History</button>
           <div className="campaign-slot" ref={account}>
             <button className="avatar" aria-expanded={panel === "account"} onClick={() => setPanel(panel === "account" ? null : "account")}
               title={reviewerName} aria-label={`Account: ${reviewerName}`}>
@@ -252,6 +228,55 @@ export default function App() {
         </div>
       </header>
 
+      <div className="camphead">
+        <div className="camphead-inner">
+          <div className="camphead-row">
+            <div className="camphead-title">
+              <div className="campaign-slot" ref={switcher}>
+                <button className="campaign-switch" aria-expanded={panel === "campaigns"} aria-label="Switch campaign"
+                  onClick={() => setPanel(panel === "campaigns" ? null : "campaigns")}>
+                  <span className="campaign-name">{view.brief.campaign || "Untitled campaign"}</span>
+                  {view.sample && <span className="badge">Sample</span>}
+                  <ChevronDown size={18} className="campaign-chevron" />
+                </button>
+                <button className="new-campaign" aria-expanded={panel === "new-campaign"}
+                  onClick={() => setPanel(panel === "new-campaign" ? null : "new-campaign")}>
+                  <Plus size={15} /> New campaign
+                </button>
+                {(panel === "campaigns" || panel === "new-campaign") && (
+                  <CampaignMenu
+                    naming={panel === "new-campaign"}
+                    campaigns={campaigns}
+                    current={view.id}
+                    sample={view.sample}
+                    onPick={async (id) => { setPanel(null); await run("open", async () => { await open(id); }); }}
+                    onNew={async (name) => {
+                      setPanel(null);
+                      await run("new", async () => { const v = await api.createCampaign(name); await refreshCampaigns(); setStep(0); return v; });
+                    }}
+                    onReset={async () => {
+                      setPanel(null);
+                      await run("reset", async () => { const v = await api.reset(view.id); setStep(0); toast("Sample reset to the start."); return v; });
+                    }}
+                    onClose={() => setPanel(null)}
+                  />
+                )}
+              </div>
+            </div>
+            <dl className="camp-stats">
+              {stats.map((s) => (
+                <div className="camp-stat" key={s.label}>
+                  <dd>{s.value}</dd>
+                  <dt>{s.label}</dt>
+                </div>
+              ))}
+            </dl>
+          </div>
+
+        </div>
+      </div>
+
+      {/* One flow, four steps: each says what you do there. */}
       <nav className="stepper" aria-label="Steps">
         {STEPS.map((s, i) => (
           <button
@@ -356,13 +381,21 @@ function humanDetail(view: View, event: string, detail: string): string {
   return detail;
 }
 
-function CampaignMenu({ campaigns, current, sample, onPick, onNew, onReset, onClose }: {
-  campaigns: CampaignSummary[]; current: string; sample: boolean;
+function CampaignMenu({ naming, campaigns, current, sample, onPick, onNew, onReset, onClose }: {
+  naming: boolean; campaigns: CampaignSummary[]; current: string; sample: boolean;
   onPick: (id: string) => void; onNew: (name: string) => void; onReset: () => void; onClose: () => void;
 }) {
-  const [naming, setNaming] = useState(false);
   const [name, setName] = useState("");
   void onClose;
+  // "New campaign" asks for a name and nothing else.
+  if (naming) {
+    return (
+      <form className="menu row" style={{ minWidth: 320, padding: 10 }} onSubmit={(e) => { e.preventDefault(); if (name.trim()) onNew(name.trim()); }}>
+        <input className="input" autoFocus aria-label="Campaign name" placeholder="Name the new campaign" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: "8px 10px", fontSize: 14 }} />
+        <Button kind="primary" size="sm" type="submit" disabled={!name.trim()}>Create</Button>
+      </form>
+    );
+  }
   return (
     <div className="menu" style={{ minWidth: 280 }}>
       {campaigns.map((c) => (
@@ -371,15 +404,7 @@ function CampaignMenu({ campaigns, current, sample, onPick, onNew, onReset, onCl
           {c.id === current && <Check size={16} />}
         </button>
       ))}
-      <div style={{ borderTop: "1px solid var(--line)", margin: "6px 0" }} />
-      {naming ? (
-        <form className="row" style={{ padding: 6 }} onSubmit={(e) => { e.preventDefault(); if (name.trim()) onNew(name.trim()); }}>
-          <input className="input" autoFocus placeholder="Campaign name" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: "8px 10px", fontSize: 14 }} />
-          <Button kind="primary" size="sm" type="submit" disabled={!name.trim()}>Create</Button>
-        </form>
-      ) : (
-        <button className="menu-item" onClick={() => setNaming(true)}><span className="row"><Plus size={16} /> New campaign</span></button>
-      )}
+      {sample && <div style={{ borderTop: "1px solid var(--line)", margin: "6px 0" }} />}
       {sample && (
         <button className="menu-item" onClick={onReset}><span className="row"><RotateCcw size={15} /> Start the sample over</span></button>
       )}

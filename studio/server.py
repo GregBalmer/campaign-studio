@@ -154,7 +154,8 @@ class Handler(BaseHTTPRequestHandler):
 
         if parts == ["status"]:
             from .notify import slack_webhook
-            return self._json({"providers": providers.available(), "default_provider": providers.default_name(),
+            return self._json({"providers": providers.available(),
+                               "default_providers": {k: providers.default_name(k) for k in providers.KINDS},
                                "slack": bool(slack_webhook())})
 
         if parts == ["settings", "key"] and method == "POST":
@@ -164,6 +165,19 @@ class Handler(BaseHTTPRequestHandler):
             from .providers.openai_provider import check_key
             check_key(key)
             config.save_env_value("OPENAI_API_KEY", key)
+            return self._json({"providers": providers.available()})
+
+        if parts == ["settings", "firefly"] and method == "POST":
+            client_id = str(b.get("client_id") or "").strip()
+            secret = str(b.get("client_secret") or "").strip()
+            if not client_id or not secret:
+                raise StudioError("Enter both the client ID and the client secret.")
+            if re.search(r"\s", client_id) or re.search(r"\s", secret):
+                raise StudioError("The client ID and secret can't contain spaces. Copy them again from the Adobe Developer Console.")
+            from .providers.firefly import check_credentials
+            check_credentials(client_id, secret)
+            config.save_env_value("FIREFLY_CLIENT_ID", client_id)
+            config.save_env_value("FIREFLY_CLIENT_SECRET", secret)
             return self._json({"providers": providers.available()})
 
         if parts == ["campaigns"]:
@@ -192,7 +206,8 @@ class Handler(BaseHTTPRequestHandler):
             return with_campaign(cid, lambda c: (c.update_brief(b), view(c))[1])
 
         if head == "provider" and method == "POST":
-            return with_campaign(cid, lambda c: (c.set_provider(b.get("provider", "")), view(c))[1])
+            return with_campaign(cid, lambda c: (c.set_provider(str(b.get("kind", "")), str(b.get("provider", ""))),
+                                                 view(c))[1])
 
         if head == "upload" and method == "POST":
             data = self._raw()

@@ -11,7 +11,7 @@ import random
 from PIL import Image, ImageDraw, ImageFilter, ImageFont
 
 from .. import config
-from .base import Provider
+from .base import ImageProvider, TextProvider
 
 # Hand-checked translations of the sample message, so the demo reads naturally.
 # Anything else is returned untranslated and clearly marked.
@@ -34,9 +34,11 @@ def _mix(a, b, t):
     return tuple(int(a[i] + (b[i] - a[i]) * t) for i in range(3))
 
 
-class MockProvider(Provider):
+class MockProvider(ImageProvider, TextProvider):
     id = "mock"
-    label = "Demo images"
+    label = "Demo"
+    model = "mock"
+    text_model = "mock"
 
     def generate_image(self, prompt: str, size: int, seed: int, hints: dict) -> Image.Image:
         rng = random.Random(seed)

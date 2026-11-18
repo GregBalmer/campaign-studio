@@ -129,7 +129,15 @@ class Campaign:
         self.state.setdefault("copy", {})
         self.state.setdefault("frames", {})
         self.state.setdefault("log", [])
-        self.state.setdefault("provider", providers.default_name())
+        # One service makes the images and one translates. A campaign saved before
+        # they were split has a single "provider", which fills both.
+        old = self.state.pop("provider", None)
+        for kind in providers.KINDS:
+            key = f"{kind}_provider"
+            name = providers.resolve(kind, self.state.get(key) or old or providers.default_name(kind))
+            if name not in [p["id"] for p in providers.available()[kind]]:
+                name = providers.default_name(kind)
+            self.state[key] = name
         # Ads built under different inputs or older layout rules are out of date, so the
         # review screen rebuilds them (keeping decisions on any that come out identical).
         for f in self.state["frames"].values():
@@ -516,7 +524,7 @@ class Campaign:
             "brief": self.brief,
             "problems": problems,
             "stage": self.stage(),
-            "provider": self.state["provider"],
+            "providers": {"image": self.state["image_provider"], "text": self.state["text_provider"]},
             "products": {p["id"]: self.pstate(p["id"]) for p in self.brief.get("products", [])},
             "copy": self.state["copy"],
             "languages": brief_mod.languages(self.brief),
@@ -538,12 +546,18 @@ class Campaign:
         self.save()
         return req
 
-    def set_provider(self, name: str) -> None:
-        if name not in ("mock", "openai"):
-            raise StudioError("Unknown image generator.")
-        if name == "openai" and not config.openai_key():
-            raise StudioError("Add an OpenAI key in Settings first.")
-        self.state["provider"] = name
+    def set_provider(self, kind: str, name: str) -> None:
+        """Choose who makes the images ("image") or who translates ("text")."""
+        if kind not in providers.KINDS:
+            raise StudioError("Choose either the image generator or the translation service.")
+        name = providers.resolve(kind, name)
+        entry = next((p for p in providers.available()[kind] if p["id"] == name), None)
+        what = "image generator" if kind == "image" else "translation service"
+        if entry is None:
+            raise StudioError(f"Unknown {what}.")
+        if not entry["ready"]:
+            raise StudioError(f"{entry['label']} isn't connected yet. Add its credentials under Models first.")
+        self.state[f"{kind}_provider"] = name
         self.save()
 
 
@@ -569,7 +583,7 @@ def generate_master(cid: str, pid: str, by: str | None = None) -> dict:
         ps = c.pstate(pid)
         if p.get("photo") and not ps.get("force_generate"):
             return c.make_master(pid, by)
-        provider = providers.get(c.state["provider"])
+        provider = providers.get_image(c.state["image_provider"])
         prompt = c.prompt_for(pid)
         attempt = ps.get("attempt", 0) + 1
         ps["attempt"] = attempt  # reserve the number so parallel clicks don't collide
@@ -591,7 +605,7 @@ def generate_master(cid: str, pid: str, by: str | None = None) -> dict:
             ps["history"].append(ps["master"])
         ps.update({"master": name, "origin": "generated", "provider": provider.id,
                    "zone": [round(v, 4) for v in img.info.get("zone", imaging.ZONE)],
-                   "model": config.image_model() if provider.id == "openai" else "mock",
+                   "model": provider.model,
                    "prompt": prompt, "focal": [round(f, 4) for f in focal],
                    "approved": None, "seconds": seconds, "size": list(img.size)})
         c.log(by, "master.generated", f"{c.product(pid)['name']} (attempt {attempt}, {provider.label}, {seconds}s)")
@@ -607,7 +621,7 @@ def translate_all(cid: str, by: str | None = None, force: bool = False) -> dict:
         message = c.brief.get("message", "").strip()
         if not message:
             raise StudioError("Add the campaign message first.")
-        provider = providers.get(c.state["provider"])
+        provider = providers.get_text(c.state["text_provider"])
         todo = [lang for lang in brief_mod.languages(c.brief)
                 if lang != src and (force or lang not in c.state["copy"])]
         if src not in c.state["copy"] or force:
@@ -619,7 +633,8 @@ def translate_all(cid: str, by: str | None = None, force: bool = False) -> dict:
     with _lock:
         c = Campaign(cid)
         for lang, res in results.items():
-            c.state["copy"][lang] = {**res, "origin": "machine", "provider": provider.id, "approved": None}
+            c.state["copy"][lang] = {**res, "origin": "machine", "provider": provider.id,
+                                     "model": provider.text_model, "approved": None}
             c.log(by, "copy.translated", f"{lang} via {provider.label}")
         c._stale_frames()
         c.save()

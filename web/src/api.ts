@@ -103,7 +103,8 @@ export interface View {
   brief: Brief;
   problems: string[];
   stage: Stage;
-  provider: "mock" | "openai";
+  /** Who makes the images and who translates; chosen separately. */
+  providers: { image: string; text: string };
   products: Record<string, ProductState>;
   copy: Record<string, CopyEntry>;
   languages: string[];
@@ -120,7 +121,12 @@ export interface ProviderInfo {
   label: string;
   ready: boolean;
   detail: string;
+  /** Set when this entry needs credentials; names the form that collects them. */
+  connect?: string;
 }
+
+export type ProviderKind = "image" | "text";
+export type ProviderLists = Record<ProviderKind, ProviderInfo[]>;
 
 export interface CampaignSummary {
   id: string;
@@ -159,14 +165,17 @@ export const api = {
   me: () => call<{ user: Person | null; demo: DemoAccount[] }>("GET", "auth/me"),
   signIn: (email: string, password: string) => call<{ user: Person }>("POST", "auth/login", { email, password }),
   signOut: () => call<{ user: null }>("POST", "auth/logout"),
-  status: () => call<{ providers: ProviderInfo[]; default_provider: string; slack: boolean }>("GET", "status"),
-  saveKey: (key: string) => call<{ providers: ProviderInfo[] }>("POST", "settings/key", { key }),
+  status: () => call<{ providers: ProviderLists; default_providers: Record<ProviderKind, string>; slack: boolean }>("GET", "status"),
+  saveKey: (key: string) => call<{ providers: ProviderLists }>("POST", "settings/key", { key }),
+  saveFirefly: (client_id: string, client_secret: string) =>
+    call<{ providers: ProviderLists }>("POST", "settings/firefly", { client_id, client_secret }),
   campaigns: () => call<CampaignSummary[]>("GET", "campaigns"),
   createCampaign: (name: string) => call<View>("POST", "campaigns", { name }),
   get: (id: string) => call<View>("GET", `campaigns/${id}`),
   reset: (id: string) => call<View>("POST", `campaigns/${id}/reset`),
   patchBrief: (id: string, patch: Partial<Brief>) => call<View>("PATCH", `campaigns/${id}/brief`, patch),
-  setProvider: (id: string, provider: string) => call<View>("POST", `campaigns/${id}/provider`, { provider }),
+  setProvider: (id: string, kind: ProviderKind, provider: string) =>
+    call<View>("POST", `campaigns/${id}/provider`, { kind, provider }),
   upload: (id: string, target: string, file: File) =>
     call<View>("POST", `campaigns/${id}/upload?target=${encodeURIComponent(target)}&name=${encodeURIComponent(file.name)}`, file),
   removePhoto: (id: string, pid: string) => call<View>("DELETE", `campaigns/${id}/products/${pid}/photo`),

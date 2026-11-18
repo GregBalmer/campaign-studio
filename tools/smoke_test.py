@@ -7,6 +7,9 @@ up, signs in as a demo person, walks the whole four-step flow through the API in
 download and the interface, runs the command-line version, and optionally saves
 a screenshot of the review screen with a local Chrome or Edge. GitHub Actions
 runs this on Windows, macOS and Linux.
+
+It also proves the Adobe Firefly adapter offline: the adapter's own tests, then
+one whole campaign made through a stand-in Firefly server (tools/fake_firefly.py).
 """
 from __future__ import annotations
 
@@ -17,8 +20,10 @@ import os
 import queue
 import re
 import shutil
+import socket
 import subprocess
 import sys
+import tempfile
 import threading
 import time
 import urllib.error
@@ -74,6 +79,59 @@ def stop(proc: subprocess.Popen) -> None:
         proc.kill()
 
 
+def firefly_checks(venv_py: Path, clean: dict) -> None:
+    """The Firefly adapter, with no Adobe account and no network."""
+    r = subprocess.run([str(venv_py), "tools/test_firefly.py"], cwd=ROOT, env=clean,
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert r.returncode == 0, f"Firefly adapter tests failed:\n{r.stderr[-1500:]}"
+    log("Firefly adapter tests OK: " + (r.stderr.strip().splitlines() or ["?"])[-3])
+
+    # One whole campaign through the stand-in server, on a throwaway copy of the
+    # sample so the real sample's outputs still come from the demo generator.
+    with socket.socket() as s:
+        s.bind(("127.0.0.1", 0))
+        port = s.getsockname()[1]
+    fake = subprocess.Popen([str(venv_py), "tools/fake_firefly.py", "--port", str(port)], cwd=ROOT, env=clean,
+                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    cid = "firefly-wiring-test"
+    tmp = Path(tempfile.mkdtemp())
+    try:
+        for _ in range(100):
+            try:
+                socket.create_connection(("127.0.0.1", port), timeout=0.2).close()
+                break
+            except OSError:
+                time.sleep(0.1)
+        else:
+            raise SystemExit("the stand-in Firefly server didn't start")
+        shutil.copytree(ROOT / "samples" / "long-light", tmp / "c")
+        brief = json.loads((tmp / "c" / "brief.json").read_text(encoding="utf-8"))
+        brief["campaign"] = "Firefly wiring test"
+        (tmp / "c" / "brief.json").write_text(json.dumps(brief, ensure_ascii=False), encoding="utf-8")
+        base = f"http://127.0.0.1:{port}"
+        env = dict(clean, FIREFLY_IMS_URL=base, FIREFLY_API_URL=base,
+                   FIREFLY_CLIENT_ID="test-client-id", FIREFLY_CLIENT_SECRET="test-client-secret")
+        r = subprocess.run([str(venv_py), "cli.py", str(tmp / "c" / "brief.json"), "--images", "firefly",
+                            "--translation", "mock"], cwd=ROOT, env=env,
+                           capture_output=True, text=True, encoding="utf-8", errors="replace")
+        assert r.returncode == 0, f"cli.py with the stand-in Firefly server failed: {r.stdout[-600:]} {r.stderr[-600:]}"
+        report = json.loads((ROOT / "outputs" / cid / "report.json").read_text(encoding="utf-8"))
+        made = [p for p in report["products"] if p["master_origin"] == "generated"]
+        assert made, "no key visual was generated through the stand-in server"
+        for p in made:
+            # A frame from the stand-in must never be recorded as Adobe Firefly's.
+            assert (p["provider"], p["model"]) == ("firefly-test", "test-server"), f"recorded as {p['provider']}/{p['model']}"
+        assert '"firefly"' not in json.dumps(report), "the report claims Adobe Firefly made something"
+        assert report["summary"]["frames"] == 12
+        log(f"Firefly wiring OK: {len(made)} key visual(s) made through the stand-in server, recorded as firefly-test")
+    finally:
+        fake.kill()
+        fake.wait(timeout=10)
+        shutil.rmtree(tmp, ignore_errors=True)
+        shutil.rmtree(ROOT / "workspace" / cid, ignore_errors=True)
+        shutil.rmtree(ROOT / "outputs" / cid, ignore_errors=True)
+
+
 def main() -> int:
     # CI consoles on Windows aren't UTF-8; never let printing a log line fail the test.
     for stream in (sys.stdout, sys.stderr):
@@ -83,7 +141,8 @@ def main() -> int:
             pass
     shot = sys.argv[sys.argv.index("--screenshot") + 1] if "--screenshot" in sys.argv else None
     env = dict(os.environ, STUDIO_PORT=PORT, PYTHONUNBUFFERED="1")
-    env.pop("OPENAI_API_KEY", None)
+    for name in [k for k in env if k == "OPENAI_API_KEY" or k.startswith("FIREFLY_")]:
+        env.pop(name)
     if (ROOT / ".env").exists():
         log("note: a .env file exists here; this test expects a fresh copy without one")
 
@@ -115,7 +174,10 @@ def main() -> int:
         base = url + "/api/campaigns/long-light"
 
         status = call(url, "GET", "/api/status")
-        assert status["default_provider"] == "mock", "with no key the app must start in demo mode"
+        assert status["default_providers"] == {"image": "mock", "text": "mock"}, "with no key the app must start in demo mode"
+        firefly = status["providers"]["image"][-1]
+        assert firefly["id"] == "firefly" and not firefly["ready"], "Firefly must wait for credentials"
+        assert [p["id"] for p in status["providers"]["text"]] == ["mock", "openai"]
         page = call(url, "GET", "/")
         assert b"<title>Campaign Studio</title>" in page, "interface not served"
         assert b"manifest.webmanifest" in page
@@ -134,7 +196,18 @@ def main() -> int:
         assert me["user"]["name"] == "Sam Rivera"
         log("sign-in OK: locked until signed in, wrong password refused, demo account works")
         by = {"by": "Someone Else"}  # ignored: approvals are stamped with the signed-in person
-        call(base, "POST", "/provider", {"provider": "mock"})
+        for kind in ("image", "text"):
+            call(base, "POST", "/provider", {"kind": kind, "provider": "mock"})
+        try:
+            call(base, "POST", "/provider", {"kind": "image", "provider": "firefly"})
+            raise SystemExit("Firefly was selectable without credentials")
+        except urllib.error.HTTPError as e:
+            assert e.code == 400
+        try:
+            call(url, "POST", "/api/settings/firefly", {"client_id": "has space", "client_secret": "x"})
+            raise SystemExit("Firefly credentials with a space were accepted")
+        except urllib.error.HTTPError as e:
+            assert e.code == 400
         for pid in ("daylight-mist", "after-sun-gel"):
             call(base, "POST", f"/products/{pid}/master", by)
             call(base, "POST", f"/products/{pid}/approve", by)
@@ -176,12 +249,16 @@ def main() -> int:
         stop(proc)
 
     venv_py = ROOT / ".venv" / ("Scripts/python.exe" if WINDOWS else "bin/python")
+    clean = dict(env, PYTHONIOENCODING="utf-8")
+    firefly_checks(venv_py, clean)
     r = subprocess.run([str(venv_py), "cli.py", "--provider", "mock"], cwd=ROOT,
-                       env=dict(os.environ, PYTHONIOENCODING="utf-8"),
+                       env=clean,
                        capture_output=True, text=True, encoding="utf-8", errors="replace")
     print("\n".join("  | " + ln for ln in r.stdout.splitlines()[-4:]), flush=True)
     assert r.returncode == 0, f"cli.py failed: {r.stderr[-500:]}"
     assert (ROOT / "outputs/long-light/daylight-mist/9x16/JP-ja.png").exists()
+    sample = json.loads((ROOT / "outputs/long-light/report.json").read_text(encoding="utf-8"))
+    assert all(p["provider"] in (None, "mock") for p in sample["products"]), "the sample must come from the demo generator"
     log(f"command line OK. All checks passed in {time.time() - t0:.0f}s")
     return 0
 

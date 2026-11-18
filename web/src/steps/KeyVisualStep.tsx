@@ -41,6 +41,8 @@ export default function KeyVisualStep() {
 
   const generatedBy = ps.origin === "supplied" ? "Your photo"
     : ps.provider === "openai" ? `Created by OpenAI${ps.seconds ? ` in ${Math.round(ps.seconds)}s` : ""}`
+    : ps.provider === "firefly" ? `Created by Adobe Firefly${ps.seconds ? ` in ${Math.round(ps.seconds)}s` : ""}`
+    : ps.provider === "firefly-test" ? "Created by the Firefly test server"
     : ps.provider === "mock" ? "Demo image (drawn locally)" : "";
 
   return (
@@ -166,7 +168,8 @@ function FocalStage({ view, pid, generating, onCreate }: { view: View; pid: stri
         <div className="generating">
           <Sparkles size={26} />
           <strong>Creating the key visual…</strong>
-          <span className="small">{view.provider === "openai" ? "Usually 15 to 40 seconds." : "Just a moment."} You can work on another product meanwhile.</span>
+          <span className="small">{view.providers.image === "openai" ? "Usually 15 to 40 seconds."
+            : view.providers.image.startsWith("firefly") ? "This can take up to a minute." : "Just a moment."} You can work on another product meanwhile.</span>
         </div>
       </div>
     );
