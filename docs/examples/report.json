@@ -1,0 +1,1120 @@
+{
+  "campaign": "Long Light",
+  "generated_at": "2026-11-18T16:22:45+00:00",
+  "brief": {
+    "message": "Made for the longest days.",
+    "audience": "Active adults 25 to 40 who spend summer weekends outdoors: hiking, swimming, at the beach.",
+    "markets": [
+      {
+        "region": "US",
+        "name": "United States",
+        "language": "en"
+      },
+      {
+        "region": "JP",
+        "name": "Japan",
+        "language": "ja"
+      }
+    ],
+    "mood": "Golden-hour summer light, warm sand and sea, relaxed and premium. Clean composition with space around the product."
+  },
+  "products": [
+    {
+      "id": "daylight-mist",
+      "name": "Daylight SPF 50 Mist",
+      "master_origin": "supplied",
+      "provider": null,
+      "model": null,
+      "attempts": 0,
+      "focal_point": [
+        0.322,
+        0.63
+      ],
+      "prompt": null,
+      "approved": {
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:18:09+00:00"
+      }
+    },
+    {
+      "id": "after-sun-gel",
+      "name": "After-Sun Aloe Gel",
+      "master_origin": "generated",
+      "provider": "openai",
+      "model": "gpt-image-2.6-flare",
+      "attempts": 1,
+      "focal_point": [
+        0.5,
+        0.658
+      ],
+      "prompt": "Photorealistic advertising photograph for a social media campaign. Hero product: After-Sun Aloe Gel. A squeeze tube of cooling aloe after-sun gel. Soft sand-coloured tube with a navy flip cap and a small coral sun mark. Mood and setting: Golden-hour summer light, warm sand and sea, relaxed and premium. Clean composition with space around the product. Audience: Active adults 25 to 40 who spend summer weekends outdoors: hiking, swimming, at the beach. Let the palette lean toward the brand colours #14213D and #FF6B4A without forcing them. Composition: a wide shot. The product is the clear hero, sharp and fully in frame, standing near the centre and a little below the middle, but small in the frame: no more than a quarter of the image height. Lots of calm, uncluttered space above and around it so the picture can be cropped to square, tall and wide formats and carry a headline. No text, no words, no extra logos, no watermarks, no people's faces.",
+      "approved": {
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:45+00:00"
+      }
+    }
+  ],
+  "copy": {
+    "en": {
+      "text": "Made for the longest days.",
+      "back_translation": "",
+      "note": "",
+      "origin": "source",
+      "approved": {
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:18:47+00:00"
+      }
+    },
+    "ja": {
+      "text": "夏の長い一日を楽しむために。",
+      "back_translation": "For enjoying a long summer day.",
+      "note": "自然な広告表現になるよう、「Made for」を目的を表す形にしました。",
+      "origin": "machine",
+      "provider": "openai",
+      "approved": {
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:18:51+00:00"
+      }
+    }
+  },
+  "summary": {
+    "frames": 12,
+    "checks_passed": 95,
+    "checks_total": 96,
+    "frames_with_failures": 0,
+    "frames_with_warnings": 1,
+    "approved": 11,
+    "rejected": 0,
+    "awaiting_review": 1
+  },
+  "frames": [
+    {
+      "path": "daylight-mist/1x1/US-en.png",
+      "product": "daylight-mist",
+      "format": "1x1",
+      "region": "US",
+      "language": "en",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.1:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "20% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:18:55+00:00"
+    },
+    {
+      "path": "daylight-mist/1x1/JP-ja.png",
+      "product": "daylight-mist",
+      "format": "1x1",
+      "region": "JP",
+      "language": "ja",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (13.9:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "21% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:18:56+00:00"
+    },
+    {
+      "path": "daylight-mist/9x16/US-en.png",
+      "product": "daylight-mist",
+      "format": "9x16",
+      "region": "US",
+      "language": "en",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.1:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "15% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:18:57+00:00"
+    },
+    {
+      "path": "daylight-mist/9x16/JP-ja.png",
+      "product": "daylight-mist",
+      "format": "9x16",
+      "region": "JP",
+      "language": "ja",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.1:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "17% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:18:58+00:00"
+    },
+    {
+      "path": "daylight-mist/16x9/US-en.png",
+      "product": "daylight-mist",
+      "format": "16x9",
+      "region": "US",
+      "language": "en",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.6:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.6:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "11% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:18:59+00:00"
+    },
+    {
+      "path": "daylight-mist/16x9/JP-ja.png",
+      "product": "daylight-mist",
+      "format": "16x9",
+      "region": "JP",
+      "language": "ja",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.7:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.8:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "12% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:19:00+00:00"
+    },
+    {
+      "path": "after-sun-gel/1x1/US-en.png",
+      "product": "after-sun-gel",
+      "format": "1x1",
+      "region": "US",
+      "language": "en",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.1:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "21% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:19:01+00:00"
+    },
+    {
+      "path": "after-sun-gel/1x1/JP-ja.png",
+      "product": "after-sun-gel",
+      "format": "1x1",
+      "region": "JP",
+      "language": "ja",
+      "status": "warn",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "warn",
+          "message": "The message touches the edge of the product.",
+          "box": [
+            0.075,
+            0.075,
+            0.687,
+            0.4713
+          ]
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.1:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "22% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": null,
+      "rendered_at": "2026-11-18T16:19:01+00:00"
+    },
+    {
+      "path": "after-sun-gel/9x16/US-en.png",
+      "product": "after-sun-gel",
+      "format": "9x16",
+      "region": "US",
+      "language": "en",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.1:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "13% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:19:02+00:00"
+    },
+    {
+      "path": "after-sun-gel/9x16/JP-ja.png",
+      "product": "after-sun-gel",
+      "format": "9x16",
+      "region": "JP",
+      "language": "ja",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.1:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (14.1:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "15% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:19:03+00:00"
+    },
+    {
+      "path": "after-sun-gel/16x9/US-en.png",
+      "product": "after-sun-gel",
+      "format": "16x9",
+      "region": "US",
+      "language": "en",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.6:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (15.2:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "12% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:19:04+00:00"
+    },
+    {
+      "path": "after-sun-gel/16x9/JP-ja.png",
+      "product": "after-sun-gel",
+      "format": "16x9",
+      "region": "JP",
+      "language": "ja",
+      "status": "pass",
+      "checks": [
+        {
+          "id": "readable",
+          "label": "Message is easy to read",
+          "status": "pass",
+          "message": "Contrast 14.8:1 (needs 4.5).",
+          "box": null
+        },
+        {
+          "id": "clear",
+          "label": "Message stays off the product",
+          "status": "pass",
+          "message": "Text and product don't overlap.",
+          "box": null
+        },
+        {
+          "id": "whole",
+          "label": "Product is fully in frame",
+          "status": "pass",
+          "message": "The whole product fits this format.",
+          "box": null
+        },
+        {
+          "id": "logo",
+          "label": "Logo is on the frame",
+          "status": "pass",
+          "message": "Logo placed and visible (15.2:1).",
+          "box": null
+        },
+        {
+          "id": "colours",
+          "label": "Brand colours are used",
+          "status": "pass",
+          "message": "13% of the frame sits in the brand palette.",
+          "box": null
+        },
+        {
+          "id": "words",
+          "label": "No restricted words",
+          "status": "pass",
+          "message": "No restricted words found.",
+          "box": null
+        },
+        {
+          "id": "fits",
+          "label": "Message fits the format",
+          "status": "pass",
+          "message": "Fits on 2 line(s) at full size.",
+          "box": null
+        },
+        {
+          "id": "sharp",
+          "label": "Image is sharp",
+          "status": "pass",
+          "message": "Enough resolution for this size.",
+          "box": null
+        }
+      ],
+      "decision": {
+        "value": "approved",
+        "by": "Sam Rivera",
+        "at": "2026-11-18T16:22:32+00:00",
+        "note": ""
+      },
+      "rendered_at": "2026-11-18T16:19:05+00:00"
+    }
+  ],
+  "activity": [
+    {
+      "at": "2026-11-18T16:18:03+00:00",
+      "by": "Sam Rivera",
+      "event": "master.supplied",
+      "detail": "Daylight SPF 50 Mist"
+    },
+    {
+      "at": "2026-11-18T16:18:09+00:00",
+      "by": "Sam Rivera",
+      "event": "master.approved",
+      "detail": "Daylight SPF 50 Mist"
+    },
+    {
+      "at": "2026-11-18T16:18:14+00:00",
+      "by": "Sam Rivera",
+      "event": "master.generated",
+      "detail": "After-Sun Aloe Gel (attempt 1, OpenAI, 10.3s)"
+    },
+    {
+      "at": "2026-11-18T16:18:29+00:00",
+      "by": "Sam Rivera",
+      "event": "master.approved",
+      "detail": "After-Sun Aloe Gel"
+    },
+    {
+      "at": "2026-11-18T16:18:35+00:00",
+      "by": "Sam Rivera",
+      "event": "copy.translated",
+      "detail": "ja via OpenAI"
+    },
+    {
+      "at": "2026-11-18T16:18:47+00:00",
+      "by": "Sam Rivera",
+      "event": "copy.approved",
+      "detail": "en"
+    },
+    {
+      "at": "2026-11-18T16:18:51+00:00",
+      "by": "Sam Rivera",
+      "event": "copy.approved",
+      "detail": "ja"
+    },
+    {
+      "at": "2026-11-18T16:19:05+00:00",
+      "by": "Sam Rivera",
+      "event": "frames.rendered",
+      "detail": "12 new or changed frame(s) in 10.9s"
+    },
+    {
+      "at": "2026-11-18T16:22:31+00:00",
+      "by": "Sam Rivera",
+      "event": "master.reopened",
+      "detail": "After-Sun Aloe Gel"
+    },
+    {
+      "at": "2026-11-18T16:22:31+00:00",
+      "by": "Sam Rivera",
+      "event": "master.approved",
+      "detail": "After-Sun Aloe Gel"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frames.rendered",
+      "detail": "0 new or changed frame(s) in 0.0s"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "daylight-mist/1x1/US"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "daylight-mist/1x1/JP"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "daylight-mist/9x16/US"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "daylight-mist/9x16/JP"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "daylight-mist/16x9/US"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "daylight-mist/16x9/JP"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "after-sun-gel/1x1/US"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "after-sun-gel/9x16/US"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "after-sun-gel/9x16/JP"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "after-sun-gel/16x9/US"
+    },
+    {
+      "at": "2026-11-18T16:22:32+00:00",
+      "by": "Sam Rivera",
+      "event": "frame.approved",
+      "detail": "after-sun-gel/16x9/JP"
+    },
+    {
+      "at": "2026-11-18T16:22:44+00:00",
+      "by": "Sam Rivera",
+      "event": "master.reopened",
+      "detail": "After-Sun Aloe Gel"
+    },
+    {
+      "at": "2026-11-18T16:22:45+00:00",
+      "by": "Sam Rivera",
+      "event": "master.approved",
+      "detail": "After-Sun Aloe Gel"
+    },
+    {
+      "at": "2026-11-18T16:22:45+00:00",
+      "by": "Sam Rivera",
+      "event": "frames.rendered",
+      "detail": "0 new or changed frame(s) in 0.0s"
+    }
+  ]
+}

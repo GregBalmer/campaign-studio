@@ -1,0 +1,66 @@
+{
+  "campaign": "Long Light",
+  "brand": {
+    "name": "Solvane",
+    "logo": "assets/logo.png",
+    "colors": {
+      "primary": "#14213D",
+      "accent": "#FF6B4A",
+      "neutral": "#F4E9DA"
+    },
+    "voice": "Warm, calm, confident. Short sentences. Never preachy."
+  },
+  "message": "Made for the longest days.",
+  "message_language": "en",
+  "audience": "Active adults 25 to 40 who spend summer weekends outdoors: hiking, swimming, at the beach.",
+  "markets": [
+    {
+      "region": "US",
+      "name": "United States",
+      "language": "en"
+    },
+    {
+      "region": "JP",
+      "name": "Japan",
+      "language": "ja"
+    }
+  ],
+  "products": [
+    {
+      "id": "daylight-mist",
+      "name": "Daylight SPF 50 Mist",
+      "description": "A slim spray bottle of SPF 50 sunscreen mist. Frosted coral bottle, navy cap, minimal label.",
+      "photo": "assets/daylight-mist.png",
+      "photo_focal": [
+        0.322,
+        0.63
+      ],
+      "photo_zone": [
+        0.05,
+        0.15
+      ]
+    },
+    {
+      "id": "after-sun-gel",
+      "name": "After-Sun Aloe Gel",
+      "description": "A squeeze tube of cooling aloe after-sun gel. Soft sand-coloured tube with a navy flip cap and a small coral sun mark."
+    }
+  ],
+  "mood": "Golden-hour summer light, warm sand and sea, relaxed and premium. Clean composition with space around the product.",
+  "banned_words": {
+    "en": [
+      "waterproof",
+      "sunblock",
+      "guaranteed",
+      "100%",
+      "cure",
+      "miracle"
+    ],
+    "ja": [
+      "完全",
+      "絶対",
+      "治る",
+      "奇跡"
+    ]
+  }
+}
