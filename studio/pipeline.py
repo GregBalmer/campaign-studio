@@ -24,6 +24,14 @@ from . import checks as checks_mod
 from . import config, imaging, providers
 from .providers import ProviderError
 
+def _same_pixels(path: Path, img: Image.Image) -> bool:
+    try:
+        with Image.open(path) as old:
+            return old.size == img.size and old.convert("RGB").tobytes() == img.convert("RGB").tobytes()
+    except Exception:
+        return False
+
+
 MASTER_SIZE = 1536  # square; large enough to crop 9:16 and 16:9 from
 _lock = threading.RLock()
 
@@ -122,6 +130,14 @@ class Campaign:
         self.state.setdefault("frames", {})
         self.state.setdefault("log", [])
         self.state.setdefault("provider", providers.default_name())
+        # Ads built under different inputs or older layout rules are out of date, so the
+        # review screen rebuilds them (keeping decisions on any that come out identical).
+        for f in self.state["frames"].values():
+            try:
+                if f.get("signature") != self._signature(f["product"], f["format"], f["language"]):
+                    f["stale"] = True
+            except Exception:
+                f["stale"] = True
 
     # ------------------------------------------------------------ storage
     def save(self) -> None:
@@ -377,7 +393,8 @@ class Campaign:
     def _signature(self, pid: str, fmt: str, lang: str) -> str:
         ps = self.pstate(pid)
         parts = [ps.get("master"), str(ps.get("focal")), str(ps.get("zone")), self.state["copy"].get(lang, {}).get("text"),
-                 json.dumps(self.brief["brand"], sort_keys=True), fmt]
+                 json.dumps(self.brief["brand"], sort_keys=True), fmt,
+                 imaging.LAYOUT_VERSION]
         return hashlib.sha1("|".join(map(str, parts)).encode()).hexdigest()[:12]
 
     def _stale_frames(self, pid: str | None = None) -> None:
@@ -404,22 +421,30 @@ class Campaign:
                         continue
                     layout = self.render(p["id"], fmt, lang)
                     (out / rel).parent.mkdir(parents=True, exist_ok=True)
-                    layout["image"].save(out / rel, optimize=True)
+                    status = checks_mod.summary(layout["checks"])
+                    # A decision stands only for the exact ad that was approved or rejected.
+                    # If the rebuild is pixel-for-pixel the same (say, a layout rule changed
+                    # that doesn't touch this ad), keep it; otherwise it's a new ad to review.
+                    same = (prev and (out / rel).exists() and prev.get("status") == status
+                            and _same_pixels(out / rel, layout["image"]))
+                    if not same:
+                        layout["image"].save(out / rel, optimize=True)
+                        rendered += 1
                     self.state["frames"][key] = {
                         "product": p["id"], "format": fmt, "region": m["region"], "language": lang,
-                        "path": rel, "checks": layout["checks"],
-                        "status": checks_mod.summary(layout["checks"]),
-                        "signature": sig, "stale": False, "rendered_at": now(),
-                        "decision": None,
+                        "path": rel, "checks": layout["checks"], "status": status,
+                        "signature": sig, "stale": False,
+                        "rendered_at": prev["rendered_at"] if same else now(),
+                        "decision": prev.get("decision") if same else None,
                     }
-                    rendered += 1
         # Drop frames for products/markets no longer in the brief.
         valid = {self.frame_key(p["id"], f, m["region"]) for p in self.brief["products"]
                  for f in config.FORMATS for m in self.brief["markets"]}
         for k in list(self.state["frames"]):
             if k not in valid:
                 del self.state["frames"][k]
-        self.log(by, "frames.rendered", f"{rendered} new or changed frame(s) in {time.time() - t0:.1f}s")
+        if rendered:
+            self.log(by, "frames.rendered", f"{rendered} ad{'s' if rendered != 1 else ''}, new or changed, in {time.time() - t0:.1f}s")
         self.save()
         self.write_report()
         return self.state["frames"]

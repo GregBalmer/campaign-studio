@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, Check, ChevronRight, Copy, ImagePlus, Mail, MessageSquare, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { api, LANGUAGE_NAMES, MARKET_PRESETS, NEW_MARKETS, photoUrl, restrictedHits, type Brief, type Market, type NewMarket, type Product } from "../api";
-import { Button, FormatGlyph, Modal, timeAgo, useApp, useDebounced, useDismiss } from "../ui";
+import { Button, FormatGlyph, Modal, timeAgo, useApp, useDebounced, useDismiss, ErrorNote } from "../ui";
 
 export default function BriefStep() {
   const { view, setView, run, busy, goTo, reviewer, toast } = useApp();
@@ -131,6 +131,7 @@ export default function BriefStep() {
                   onRemove={() => removePhoto(p.id)}
                 />
                 <div>
+                  <ErrorNote k={`upload-${p.id}`} action="Choose another file" />
                   <div className="field">
                     <label className="label" htmlFor={`pn-${p.id}`}>
                       Product {i + 1}
@@ -362,7 +363,7 @@ function PhotoDrop({ url, busy, onFile, onRemove }: { url: string | null; busy: 
       <input ref={input} type="file" accept="image/png,image/jpeg,image/webp" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) onFile(f); e.target.value = ""; }} />
       {url ? (
         <>
-          <img src={url} alt="" />
+          <img src={`${url}?w=320`} alt="" />
           <span className="tag">Your photo</span>
           <button className="remove" aria-label="Remove photo" onClick={(e) => { e.stopPropagation(); onRemove(); }}><X size={14} /></button>
         </>

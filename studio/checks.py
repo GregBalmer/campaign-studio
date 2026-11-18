@@ -66,14 +66,14 @@ def run(layout: dict, text: str, lang: str, brief: dict) -> list[dict]:
     # 1. Readable message.
     ratio = contrast_with_white(layout["plate"], layout["text_box"])
     if ratio >= 4.5:
-        add("readable", "Message is easy to read", PASS, f"Contrast {ratio:.1f}:1 (needs 4.5).")
+        add("readable", "Message is easy to read", PASS, f"Strong contrast: {ratio:.1f} to 1, above the 4.5 minimum.")
     elif ratio >= 3:
         add("readable", "Message is easy to read", WARN,
-            f"Contrast is {ratio:.1f}:1, a little low. Move the focal point so the text sits on a calmer area.",
+            f"Contrast is {ratio:.1f} to 1, a little under the 4.5 minimum. Check the brand's main colour behind the text.",
             layout["text_box"])
     else:
         add("readable", "Message is easy to read", FAIL,
-            f"Contrast is only {ratio:.1f}:1. The message will be hard to read.", layout["text_box"])
+            f"Contrast is only {ratio:.1f} to 1 (the minimum is 4.5). The message will be hard to read.", layout["text_box"])
 
     # 2. Message clear of the product.
     tb = layout["text_box"]
@@ -84,31 +84,31 @@ def run(layout: dict, text: str, lang: str, brief: dict) -> list[dict]:
             layout["card_box"])
     elif on > 0:
         add("clear", "Message stays off the product", WARN,
-            "The message touches the edge of the product.", layout["card_box"])
+            "The message touches the edge of the product. If it feels tight, adjust the product box in step 2.", layout["card_box"])
     else:
-        add("clear", "Message stays off the product", PASS, "Text and product don't overlap.")
+        add("clear", "Message stays off the product", PASS, "The message and the product don't overlap.")
 
     # 2b. Product not cut off by the crop.
     vis = layout["product_visible"]
     if vis >= 0.9:
-        add("whole", "Product is fully in frame", PASS, "The whole product fits this format.")
+        add("whole", "Product is fully in frame", PASS, "The whole product shows in this size.")
     elif vis >= 0.7:
         add("whole", "Product is fully in frame", WARN,
-            "The edge of the product is cropped in this format.", layout["product_box"])
+            "The edge of the product is cut off in this size. Move the product box in step 2.", layout["product_box"])
     else:
         add("whole", "Product is fully in frame", FAIL,
-            f"Only about {vis:.0%} of the product fits this format.", layout["product_box"])
+            f"Only about {vis:.0%} of the product shows in this size. Move the product box in step 2.", layout["product_box"])
 
     # 3. Logo present and visible.
     lb = layout["logo_box"]
     if not lb:
-        add("logo", "Logo is on the frame", FAIL, "No logo was supplied for this brand.")
+        add("logo", "Logo is on the ad", FAIL, "No logo was supplied for this brand.")
     else:
         lr = contrast_with_white(layout["plate"], lb)
         if lr >= 3:
-            add("logo", "Logo is on the frame", PASS, f"Logo placed and visible ({lr:.1f}:1).")
+            add("logo", "Logo is on the ad", PASS, "The logo is placed and stands out clearly.")
         else:
-            add("logo", "Logo is on the frame", WARN, f"Logo is placed but faint ({lr:.1f}:1).", lb)
+            add("logo", "Logo is on the ad", WARN, "The logo is placed but hard to see against what's behind it.", lb)
 
     # 4. Brand colours: how much of the frame sits close to the brand palette.
     colors = brief["brand"]["colors"]
@@ -118,10 +118,10 @@ def run(layout: dict, text: str, lang: str, brief: dict) -> list[dict]:
     near = sum(1 for p in px if min(sum(abs(p[i] - c[i]) for i in range(3)) for c in palette) < 70)
     share = near / len(px)
     if share >= 0.08:
-        add("colours", "Brand colours are used", PASS, f"{share:.0%} of the frame sits in the brand palette.")
+        add("colours", "Brand colours are used", PASS, f"{share:.0%} of the ad uses brand colours.")
     else:
         add("colours", "Brand colours are used", WARN,
-            f"Only {share:.0%} of the frame is in the brand palette. The image may feel off-brand.")
+            f"Only {share:.0%} of the ad uses brand colours. It may feel off-brand.")
 
     # 5. Words allowed by legal.
     hits = banned_hits(text, lang, brief)
@@ -134,23 +134,23 @@ def run(layout: dict, text: str, lang: str, brief: dict) -> list[dict]:
     # 6. Message fits.
     if layout["too_long"]:
         add("fits", "Message fits the format", FAIL,
-            "The message is too long for this format, even at the smallest size. Shorten it.", tb)
+            "The message is too long for this size, even at the smallest type. Shorten it in step 3.", tb)
     elif layout["shrunk"]:
         add("fits", "Message fits the format", WARN,
-            "The message was set smaller than usual to fit.", tb)
+            "The message was set a little smaller to fit. A shorter line would read bigger.", tb)
     else:
-        add("fits", "Message fits the format", PASS, f"Fits on {layout['lines']} line(s) at full size.")
+        add("fits", "Message fits the format", PASS, f"Fits on {'one line' if layout['lines'] == 1 else str(layout['lines']) + ' lines'} at full size.")
 
     # 7. Image sharp enough.
     s = layout["source_scale"]
     if s >= 0.75:
-        add("sharp", "Image is sharp", PASS, "Enough resolution for this size.")
+        add("sharp", "Image is sharp", PASS, "There's enough detail for this size.")
     elif s >= 0.5:
         add("sharp", "Image is sharp", WARN,
-            f"The picture was enlarged {1 / s:.1f}× for this format and may look soft.")
+            f"The picture was enlarged {1 / s:.1f}× for this size and may look soft.")
     else:
         add("sharp", "Image is sharp", FAIL,
-            f"The picture was enlarged {1 / s:.1f}× for this format. Use a larger photo.")
+            f"The picture was enlarged {1 / s:.1f}× for this size. Use a larger photo.")
 
     return out
 

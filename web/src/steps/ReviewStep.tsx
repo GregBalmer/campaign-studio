@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCheck, Download, FolderOpen, Loader2, X } from "lucide-react";
 import { api, frameUrl, LANGUAGE_NAMES, type Frame } from "../api";
-import { Button, CheckIconDot, Markers, StatusBadge, timeAgo, useApp, useEscape } from "../ui";
+import { Button, CheckIconDot, ErrorNote, Markers, StatusBadge, timeAgo, useApp, useEscape } from "../ui";
 
-type Filter = "all" | "attention" | "open" | "approved" | "rejected";
+type Filter = "all" | "open" | "approved" | "rejected";
 const FORMAT_ORDER = ["1x1", "9x16", "16x9"];
 
 export default function ReviewStep() {
@@ -28,16 +28,15 @@ export default function ReviewStep() {
 
   const counts = {
     total: entries.length,
-    attention: entries.filter(([, f]) => f.status !== "pass").length,
     approved: entries.filter(([, f]) => f.decision?.value === "approved").length,
     rejected: entries.filter(([, f]) => f.decision?.value === "rejected").length,
   };
   const open = counts.total - counts.approved - counts.rejected;
+  const flaggedOpen = entries.filter(([, f]) => !f.decision && f.status !== "pass").length;
   const passingOpen = entries.filter(([, f]) => !f.decision && f.status === "pass");
 
   const shown = entries.filter(([, f]) =>
     filter === "all" ? true
-    : filter === "attention" ? f.status !== "pass"
     : filter === "open" ? !f.decision
     : f.decision?.value === filter);
 
@@ -80,23 +79,28 @@ export default function ReviewStep() {
 
       <div className="review-bar">
         {([
-          ["all", counts.total, counts.total === 1 ? "ad" : "ads", undefined],
-          ["attention", counts.attention, "need a look", counts.attention ? "var(--warn)" : undefined],
-          ["open", open, "to review", undefined],
-          ["approved", counts.approved, "approved", counts.approved ? "var(--ok)" : undefined],
-          ["rejected", counts.rejected, "rejected", counts.rejected ? "var(--fail)" : undefined],
-        ] as const).map(([k, n, label, color]) => (
+          ["all", counts.total, counts.total === 1 ? "ad" : "ads", undefined, "Show every ad"],
+          ["open", open, "to review", undefined, "Show ads nobody has approved or rejected yet"],
+          ["approved", counts.approved, "approved", counts.approved ? "var(--ok)" : undefined, "Show approved ads"],
+          ["rejected", counts.rejected, "rejected", counts.rejected ? "var(--fail)" : undefined, "Show rejected ads"],
+        ] as const).map(([k, n, label, color, title]) => (
           <button key={k} className={`stat ${filter === k ? "on" : ""}`} aria-pressed={filter === k}
-            onClick={() => setFilter(filter === k ? "all" : k)} title={k === "all" ? "Show every ad" : `Show only ads that ${label === "need a look" ? "need a look" : `are ${label}`}`}>
-            <b style={{ color }}>{n}</b><span>{label}</span>
+            onClick={() => setFilter(filter === k ? "all" : k)} title={title}>
+            <b style={{ color }}>{n}</b>
+            <span>{label}{k === "open" && flaggedOpen > 0 && <em className="stat-flag"> · {flaggedOpen} flagged</em>}</span>
           </button>
         ))}
         <span className="space" />
         {building && <span className="row muted small"><Loader2 size={15} className="spin" /> Updating…</span>}
-        <Button kind="approve" icon={<CheckCheck size={17} />} disabled={!passingOpen.length} busy={busy.has("bulk")} onClick={approveAllPassing}>
-          Approve all that pass ({passingOpen.length})
-        </Button>
+        {passingOpen.length > 0 ? (
+          <Button kind="approve" icon={<CheckCheck size={17} />} busy={busy.has("bulk")} onClick={approveAllPassing}>
+            Approve all that pass ({passingOpen.length})
+          </Button>
+        ) : counts.total > 0 && !building && (
+          <span className="row muted small"><CheckCheck size={16} /> {open ? "Every passing ad is approved" : "Every ad has a decision"}</span>
+        )}
       </div>
+      <div style={{ marginBottom: 16 }}><ErrorNote k="fanout" action="Build again" /></div>
 
       {view.brief.products.map((p) => {
         const items = shown.filter(([, f]) => f.product === p.id);
@@ -124,7 +128,7 @@ export default function ReviewStep() {
       })}
       {shown.length === 0 && (
         <div className="empty">
-          {{ all: "No ads yet.", attention: "Nothing needs a look. Every ad passed its checks.", open: "Nothing left to review.",
+          {{ all: "No ads yet.", open: "Nothing left to review. Every ad has a decision.",
              approved: "No ads approved yet.", rejected: "No ads rejected." }[filter]}
           {filter !== "all" && <><br /><button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setFilter("all")}>Show all ads</button></>}
         </div>
@@ -156,7 +160,7 @@ function Tile({ f, onOpen }: { f: Frame; onOpen: () => void }) {
   return (
     <button className="tile" onClick={onOpen} style={{ width: w }}>
       <div className={`tile-img ${decided ? `decided-${decided}` : ""}`} style={{ width: w, height: h }}>
-        <img src={frameUrl(view, f)} alt={`${spec.label}, ${market?.name}`} loading="lazy" />
+        <img src={`${frameUrl(view, f)}&w=640`} alt={`${spec.label}, ${market?.name}`} loading="lazy" />
         {!decided && <Markers checks={f.checks} />}
         <span className="tile-status">
           {decided === "approved" ? <StatusBadge status="pass"><Check size={12} strokeWidth={3} /> Approved</StatusBadge>
@@ -217,7 +221,7 @@ function Lightbox({ keys, current, onMove, onClose }: { keys: string[]; current:
       <div className="lightbox-panel" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="lightbox-stage">
           <div className="frame">
-            <img src={frameUrl(view, f)} alt="" />
+            <img src={`${frameUrl(view, f)}&w=1600`} alt="" />
             <Markers checks={f.checks} />
           </div>
         </div>
@@ -277,7 +281,7 @@ function Lightbox({ keys, current, onMove, onClose }: { keys: string[]; current:
           </div>
           <div className="row" style={{ justifyContent: "space-between" }}>
             <Button kind="ghost" size="sm" icon={<ArrowLeft size={15} />} onClick={() => move(-1)}>Previous</Button>
-            <span className="muted small">A · R · ← →</span>
+            <span className="muted small" title="Keyboard: A approves, R rejects, arrows move">A approve · R reject</span>
             <Button kind="ghost" size="sm" onClick={() => move(1)}>Next <ArrowRight size={15} /></Button>
           </div>
         </div>

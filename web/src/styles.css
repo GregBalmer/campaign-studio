@@ -253,8 +253,12 @@ a.btn { text-decoration: none; }
 .stage {
   position: relative; border-radius: var(--radius); overflow: hidden; background: #e9e5de;
   aspect-ratio: 1 / 1; user-select: none; touch-action: none;
-  width: min(100%, calc(100vh - 400px)); min-width: 320px; margin-inline: auto;
+  width: min(100%, calc(100vh - 470px)); min-width: 320px; margin-inline: auto;
 }
+.stage img.loading { opacity: 0; }
+.stage img { transition: opacity 0.2s; }
+.stage-loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); background: linear-gradient(100deg, #e9e5de 30%, #f1ede7 50%, #e9e5de 70%) 0 0 / 300% 100%; animation: shimmer 1.4s linear infinite; }
+@keyframes shimmer { to { background-position: -150% 0; } }
 .stage img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 .stage.can-drag { cursor: crosshair; }
 .crop-guide { position: absolute; border: 1.5px solid rgba(255, 255, 255, 0.85); border-radius: 4px; pointer-events: none; box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.18); transition: all 0.2s ease; }
@@ -324,7 +328,7 @@ a.btn { text-decoration: none; }
 .approved-stamp .muted { color: var(--ok); opacity: 0.8; font-weight: 500; }
 
 /* ---------------------------------------------------------------- words */
-.lang-card { display: grid; grid-template-columns: minmax(0, 1fr) 300px; gap: 28px; }
+.lang-card { display: grid; grid-template-columns: minmax(0, 1fr) 340px; gap: 28px; }
 @media (max-width: 1000px) { .lang-card { grid-template-columns: 1fr; } }
 .lang-head { display: flex; align-items: center; gap: 10px; margin-bottom: 14px; }
 .lang-head h3 { margin: 0; font-size: 17px; font-weight: 650; letter-spacing: -0.01em; }
@@ -334,11 +338,14 @@ a.btn { text-decoration: none; }
 .meaning { margin-top: 10px; font-size: 14px; color: var(--ink-2); line-height: 1.5; }
 .meaning b { font-weight: 600; }
 .note { margin-top: 8px; font-size: 13px; color: var(--ink-3); line-height: 1.5; }
+.lang-main { display: flex; flex-direction: column; min-width: 0; }
+.lang-actions { margin-top: auto; padding-top: 18px; }
+.copy-locked { padding: 12px 0 4px; color: var(--ink); }
 .preview-wrap { border-radius: 12px; overflow: hidden; background: var(--hover); position: relative; }
 .preview-wrap img { width: 100%; }
 .preview-wrap.loading img { opacity: 0.6; transition: opacity 0.2s; }
 .seg { display: inline-flex; padding: 3px; border-radius: 10px; background: var(--hover); gap: 2px; }
-.seg button { white-space: nowrap; height: 28px; padding: 0 10px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
+.seg button { white-space: nowrap; height: 28px; padding: 0 9px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; font-size: 12.5px; font-weight: 600; color: var(--ink-3); }
 .seg button.on { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08); }
 
 /* ---------------------------------------------------------------- review */
@@ -476,3 +483,17 @@ a.btn { text-decoration: none; }
 .setup-body { font-size: 13.5px; color: var(--ink-2); line-height: 1.55; margin-top: 3px; }
 .involved { margin: 10px 0 0; padding-left: 18px; display: flex; flex-direction: column; gap: 8px; font-size: 13.5px; color: var(--ink-2); line-height: 1.5; }
 .involved b { color: var(--ink); font-weight: 620; }
+
+/* ---------------------------------------------------------------- errors that stay put */
+.error-note {
+  display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; align-items: start;
+  padding: 12px 14px; border-radius: 12px; background: var(--fail-bg, #fdecea); color: var(--fail);
+  font-size: 13.5px; line-height: 1.45; text-align: left;
+}
+.error-note > svg { margin-top: 2px; }
+.error-note > span { color: var(--ink); }
+.error-note-actions { grid-column: 2; display: flex; align-items: center; gap: 6px; margin-top: 6px; }
+.error-note-close { margin-left: auto; border: 0; background: transparent; color: var(--ink-3); cursor: pointer; padding: 4px; border-radius: 6px; }
+.error-note-close:hover { background: var(--hover); }
+
+.stat-flag { font-style: normal; color: var(--warn); font-weight: 600; }

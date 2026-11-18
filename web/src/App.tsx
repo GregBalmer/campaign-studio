@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, History, Plus, RotateCcw, Settings2, UserRound, X } from "lucide-react";
-import { api, ApiError, type CampaignSummary, type ProviderInfo, type View } from "./api";
+import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, type CampaignSummary, type ProviderInfo, type View } from "./api";
 import { AppCtx, Button, Drawer, Modal, clock, useDismiss, type Ctx } from "./ui";
 import BriefStep from "./steps/BriefStep";
 import KeyVisualStep from "./steps/KeyVisualStep";
@@ -18,6 +18,7 @@ const STEPS = [
 const stageStep = { setup: 0, master: 1, words: 2, review: 3 } as const;
 // Each step has its own address, so a refresh or a shared link keeps your place.
 const HASHES = ["brief", "key-visual", "message", "review"];
+const INLINE_ERRORS = /^(master-|upload-|translate$|fanout$)/;
 
 function store(key: string, value?: string): string | null {
   try {
@@ -78,17 +79,47 @@ export default function App() {
 
   const loaded = view !== null;
   useEffect(() => {
-    if (loaded) history.replaceState(null, "", `#${HASHES[step]}`);
+    if (loaded && window.location.hash !== `#${HASHES[step]}`) history.replaceState(null, "", `#${HASHES[step]}`);
   }, [step, loaded]);
 
+  // The browser's Back and Forward buttons (and edits to the address) move between steps,
+  // but never past the furthest step the campaign has reached.
+  const furthest = view ? stageStep[view.stage] : 0;
+  useEffect(() => {
+    const onNav = () => {
+      const asked = HASHES.indexOf(window.location.hash.slice(1));
+      if (asked < 0) return;
+      setStep(Math.min(asked, furthest));
+      window.scrollTo({ top: 0 });
+    };
+    window.addEventListener("popstate", onNav);
+    window.addEventListener("hashchange", onNav);
+    return () => {
+      window.removeEventListener("popstate", onNav);
+      window.removeEventListener("hashchange", onNav);
+    };
+  }, [furthest]);
+
+  // Errors from long-running work (creating an image, translating, building the ads,
+  // uploading) stay next to the thing that failed, with a Try again button, instead of
+  // a toast that can vanish while nobody's looking.
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const retries = useRef<Record<string, () => Promise<View | void>>>({});
   const run = useCallback<Ctx["run"]>(async (key, fn) => {
     setBusy((b) => new Set(b).add(key));
+    setErrors((e) => { if (!(key in e)) return e; const n = { ...e }; delete n[key]; return n; });
     try {
       const v = await fn();
       if (v) setView(v);
       return true;
     } catch (e) {
-      toast(e instanceof ApiError ? e.message : "Something went wrong. Try again.", "error");
+      const msg = e instanceof ApiError ? e.message : "Something went wrong. Try again.";
+      if (INLINE_ERRORS.test(key)) {
+        retries.current[key] = fn;
+        setErrors((x) => ({ ...x, [key]: msg }));
+      } else {
+        toast(msg, "error");
+      }
       return false;
     } finally {
       setBusy((b) => {
@@ -98,6 +129,14 @@ export default function App() {
       });
     }
   }, [toast]);
+
+  const retry = useCallback((key: string) => {
+    const fn = retries.current[key];
+    if (fn) void run(key, fn);
+  }, [run]);
+  const dismissError = useCallback((key: string) => {
+    setErrors((e) => { const n = { ...e }; delete n[key]; return n; });
+  }, []);
 
   const reviewer = useCallback(() => {
     if (reviewerName) return Promise.resolve(reviewerName);
@@ -123,8 +162,12 @@ export default function App() {
   const provider = providers.find((p) => p.id === view.provider);
 
   const ctx: Ctx = {
-    view, setView, run, busy, reviewer, reviewerName, toast, slack,
-    goTo: (s) => { setStep(s); window.scrollTo({ top: 0, behavior: "smooth" }); },
+    view, setView, run, busy, reviewer, reviewerName, toast, slack, errors, retry, dismissError,
+    goTo: (s) => {
+      if (s !== step) history.pushState(null, "", `#${HASHES[s]}`);
+      setStep(s);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    },
   };
 
   return (
@@ -207,10 +250,10 @@ export default function App() {
           <h2>History</h2>
           <p className="muted small" style={{ marginTop: 0 }}>Who did what. The full record is saved in report.json.</p>
           {view.log.length === 0 && <p className="muted">Nothing yet.</p>}
-          {[...view.log].reverse().map((l, i) => (
+          {[...view.log].reverse().filter((l) => !(l.event === "frames.rendered" && /^0 /.test(l.detail))).map((l, i) => (
             <div className="history-item" key={i}>
               <span className="when">{clock(l.at)}</span>
-              <span><b>{l.by}</b> {describe(l.event)} <span className="muted">{l.detail}</span></span>
+              <span><b>{l.by}</b> {describe(l.event)} <span className="muted">{humanDetail(view, l.event, l.detail)}</span></span>
             </div>
           ))}
         </Drawer>
@@ -252,12 +295,34 @@ function describe(event: string): string {
     "copy.translated": "translated the message:",
     "copy.edited": "edited the message:",
     "copy.approved": "approved the message:",
-    "frames.rendered": "built the ads:",
+    "copy.reopened": "reopened the message:",
+    "frames.rendered": "built",
     "frame.approved": "approved",
     "frame.rejected": "rejected",
     "frame.cleared": "cleared the decision on",
-    "market.requested": "requested a new market:",
+    "market.requested": "asked IT to set up",
   } as Record<string, string>)[event] ?? event;
+}
+
+/** Turns the record's ids ("after-sun-gel/16x9/JP", "ja") into what people call them. */
+function humanDetail(view: View, event: string, detail: string): string {
+  const product = (id: string) => view.brief.products.find((p) => p.id === id)?.name ?? id;
+  const market = (r: string) => view.brief.markets.find((m) => m.region === r)?.name ?? r;
+  if (event.startsWith("frame.")) {
+    const [key, ...note] = detail.split(": ");
+    const [pid, fmt, region] = key.split("/");
+    if (!fmt || !region) return detail;
+    const size = view.formats[fmt]?.label ?? fmt;
+    return `${product(pid)} · ${size} · ${market(region)}${note.length ? ` · “${note.join(": ")}”` : ""}`;
+  }
+  if (event.startsWith("copy.")) return LANGUAGE_NAMES[detail] ?? detail;
+  if (event === "frames.rendered") return detail.replace(/ new or changed frame\(s\)/, " ads, new or changed,");
+  if (event === "market.requested") {
+    const [region, , via] = detail.split(" ");
+    const name = NEW_MARKETS.find((m) => m.region === region)?.name ?? region;
+    return via ? `${name}, by ${via}` : name;
+  }
+  return detail;
 }
 
 function CampaignMenu({ campaigns, current, sample, onPick, onNew, onReset, onClose }: {

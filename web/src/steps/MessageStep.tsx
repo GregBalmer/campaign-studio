@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Languages, Undo2 } from "lucide-react";
+import { ArrowRight, Check, Languages, Pencil } from "lucide-react";
 import { api, LANGUAGE_NAMES, restrictedHits, type Check as CheckT } from "../api";
-import { Button, CheckIconDot, Markers, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
+import { Button, CheckIconDot, ErrorNote, Markers, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function MessageStep() {
   const { view, run, busy, reviewer, goTo } = useApp();
@@ -26,6 +26,7 @@ export default function MessageStep() {
 
       {missing && (
         <div className="card card-pad empty" style={{ padding: 40 }}>
+          <ErrorNote k="translate" />
           {translating ? (
             <><Languages size={26} /><p style={{ margin: "12px 0 0" }}><b>Translating…</b> adapting the line for each market, not just swapping words.</p></>
           ) : (
@@ -91,7 +92,7 @@ function LanguageCard({ lang }: { lang: string }) {
   return (
     <section className="card card-pad" style={{ marginBottom: 16 }}>
       <div className="lang-card">
-        <div>
+        <div className="lang-main">
           <div className="lang-head">
             <h3>{LANGUAGE_NAMES[lang]}</h3>
             <span className="muted small">{isSource ? "Original" : markets.join(", ")}</span>
@@ -104,21 +105,25 @@ function LanguageCard({ lang }: { lang: string }) {
           {!isSource && (
             <div className="source-line">From {LANGUAGE_NAMES[source]}: <b>{view.copy[source]?.text}</b></div>
           )}
-          <textarea
-            className={`textarea copy-input ${hits.length ? "invalid" : ""}`}
-            rows={2}
-            value={text}
-            lang={lang}
-            disabled={!!entry.approved}
-            onChange={(e) => setText(e.target.value)}
-            onBlur={save}
-            aria-label={`${LANGUAGE_NAMES[lang]} message`}
-          />
+          {entry.approved ? (
+            <div className="copy-input copy-locked" lang={lang} aria-label={`${LANGUAGE_NAMES[lang]} message, approved`}>{entry.text}</div>
+          ) : (
+            <textarea
+              className={`textarea copy-input ${hits.length ? "invalid" : ""}`}
+              rows={2}
+              value={text}
+              lang={lang}
+              onChange={(e) => setText(e.target.value)}
+              onBlur={save}
+              aria-label={`${LANGUAGE_NAMES[lang]} message`}
+            />
+          )}
           {hits.length > 0 && <div className="field-note fail" style={{ marginTop: 6 }}>Legal restricts “{hits.join("”, “")}” in {LANGUAGE_NAMES[lang]}.</div>}
           {!isSource && entry.back_translation && !dirty && (
             <div className="meaning"><b>What it says:</b> {entry.back_translation}</div>
           )}
-          {!isSource && entry.note && !dirty && <div className="note">{entry.note}</div>}
+          {/* The note is for a reviewer who reads the source language; older notes came back in the target language. */}
+          {!isSource && entry.note && !dirty && (source !== "en" || !/[\u3040-\u30ff\u3400-\u9fff\uac00-\ud7af]/.test(entry.note)) && <div className="note">{entry.note}</div>}
 
           {problems.length > 0 && (
             <ul className="check-list" style={{ marginTop: 14 }}>
@@ -128,11 +133,11 @@ function LanguageCard({ lang }: { lang: string }) {
             </ul>
           )}
 
-          <div className="row" style={{ marginTop: 18 }}>
+          <div className="row lang-actions">
             {entry.approved ? (
               <>
                 <span className="muted small">Approved by {entry.approved.by} · {timeAgo(entry.approved.at)}</span>
-                <Button kind="ghost" size="sm" icon={<Undo2 size={14} />}
+                <Button kind="ghost" size="sm" icon={<Pencil size={14} />}
                   onClick={async () => { const by = await reviewer(); run(`copy-${lang}`, () => api.reopenCopy(view.id, lang, by)); }}>
                   Edit
                 </Button>
@@ -160,7 +165,7 @@ function LanguageCard({ lang }: { lang: string }) {
             </div>
             <div className="seg">
               {Object.entries(view.formats).map(([k, f]) => (
-                <button key={k} className={k === format ? "on" : ""} onClick={() => setFormat(k)}>{f.ratio}</button>
+                <button key={k} className={k === format ? "on" : ""} onClick={() => setFormat(k)} title={`${f.label} · ${f.ratio}`}>{f.label.split(" ")[0]}</button>
               ))}
             </div>
           </div>

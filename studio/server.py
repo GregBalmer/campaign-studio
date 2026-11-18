@@ -10,12 +10,16 @@ import json
 import mimetypes
 import os
 import re
+import threading
 import traceback
 import urllib.parse
 import zipfile
+from collections import OrderedDict
 from http import HTTPStatus
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
+
+from PIL import Image
 
 from . import config, pipeline, providers
 from .pipeline import Campaign, StudioError, with_campaign
@@ -97,7 +101,7 @@ class Handler(BaseHTTPRequestHandler):
             if path.startswith("/api/"):
                 return self._api(method, path[5:].strip("/").split("/"), query)
             if path.startswith("/files/"):
-                return self._files(path[7:])
+                return self._files(path[7:], query)
             return self._static(path)
         except (StudioError, ProviderError) as e:
             self._error(str(e), 400)
@@ -237,12 +241,16 @@ class Handler(BaseHTTPRequestHandler):
                    {"Content-Disposition": f'attachment; filename="{name}"'})
 
     # ------------------------------------------------------------ files
-    def _files(self, rel: str) -> None:
+    def _files(self, rel: str, query: dict | None = None) -> None:
         root, _, rest = rel.partition("/")
         base = {"workspace": config.WORKSPACE, "outputs": config.OUTPUTS}.get(root)
         p = _safe_file(base, rest) if base else None
         if not p:
             return self._error("Not found.", 404)
+        width = (query or {}).get("w", "")
+        if width.isdigit() and p.suffix.lower() in (".png", ".jpg", ".jpeg"):
+            # A screen-sized JPEG of a large image, so the interface doesn't wait on a 2-3 MB PNG.
+            return self._send(200, _preview(p, min(2400, max(64, int(width)))), "image/jpeg")
         ctype = mimetypes.guess_type(str(p))[0] or "application/octet-stream"
         self._send(200, p.read_bytes(), ctype)
 
@@ -256,6 +264,30 @@ class Handler(BaseHTTPRequestHandler):
         if ctype.startswith("text/") or ctype in ("application/javascript",):
             ctype += "; charset=utf-8"
         self._send(200, p.read_bytes(), ctype)
+
+
+_previews: "OrderedDict[tuple, bytes]" = OrderedDict()
+_previews_lock = threading.Lock()
+
+
+def _preview(p: Path, width: int) -> bytes:
+    key = (str(p), p.stat().st_mtime_ns, width)
+    with _previews_lock:
+        if key in _previews:
+            _previews.move_to_end(key)
+            return _previews[key]
+    img = Image.open(p)
+    img.load()
+    if img.width > width:
+        img = img.resize((width, round(img.height * width / img.width)), Image.LANCZOS)
+    buf = io.BytesIO()
+    img.convert("RGB").save(buf, "JPEG", quality=86, optimize=True)
+    data = buf.getvalue()
+    with _previews_lock:
+        _previews[key] = data
+        while len(_previews) > 96:
+            _previews.popitem(last=False)
+    return data
 
 
 def make_server(port: int) -> ThreadingHTTPServer:

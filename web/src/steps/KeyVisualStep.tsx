@@ -1,10 +1,10 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Camera, Check, ChevronRight, RefreshCw, Sparkles, Undo2 } from "lucide-react";
+import { ArrowRight, Camera, Check, ChevronRight, Loader2, RefreshCw, Sparkles, Undo2 } from "lucide-react";
 import { api, masterUrl, type Check as CheckT, type View } from "../api";
-import { Button, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
+import { Button, ErrorNote, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function KeyVisualStep() {
-  const { view, run, busy, reviewer, goTo } = useApp();
+  const { view, run, busy, reviewer, goTo, errors } = useApp();
   const products = view.brief.products;
   const firstOpen = products.find((p) => !view.products[p.id]?.approved)?.id ?? products[0].id;
   const [pid, setPid] = useState(firstOpen);
@@ -58,9 +58,10 @@ export default function KeyVisualStep() {
           const url = masterUrl(view, p.id);
           return (
             <button key={p.id} role="tab" aria-selected={p.id === pid} className={`product-tab ${p.id === pid ? "active" : ""}`} onClick={() => setPid(p.id)}>
-              {url ? <img src={`${url}?v=${s.attempt ?? 0}`} alt="" /> : <span className="thumb" />}
+              {url ? <img src={`${url}?v=${s.attempt ?? 0}&w=96`} alt="" /> : <span className="thumb" />}
               {p.name || "Untitled product"}
               {busy.has(`master-${p.id}`) ? <StatusBadge status="neutral">Creating…</StatusBadge>
+                : errors[`master-${p.id}`] ? <StatusBadge status="fail">Didn't work</StatusBadge>
                 : s.approved ? <StatusBadge status="pass"><Check size={12} strokeWidth={3} /> Approved</StatusBadge>
                 : s.master ? <StatusBadge status="warn">Needs approval</StatusBadge> : null}
             </button>
@@ -77,6 +78,7 @@ export default function KeyVisualStep() {
             <p className="card-hint" style={{ marginBottom: 16 }}>{generatedBy || "No key visual yet."}</p>
 
             <div className="stack">
+              <ErrorNote k={`master-${product.id}`} />
               {ps.approved ? (
                 <>
                   <div className="approved-stamp">
@@ -143,7 +145,9 @@ function FocalStage({ view, pid, generating, onCreate }: { view: View; pid: stri
   const [zone, setZone] = useState<[number, number]>(ps.zone ?? [0.08, 0.2]);
   const [mode, setMode] = useState<null | { kind: "move" | "resize"; dx: number; dy: number }>(null);
   const [guides, setGuides] = useState(true);
+  const [shown, setShown] = useState("");
   const locked = !!ps.approved;
+  const src = `${url}?v=${ps.attempt ?? 0}&w=1200`;
 
   useEffect(() => {
     setFocal(ps.focal ?? [0.5, 0.5]);
@@ -217,7 +221,8 @@ function FocalStage({ view, pid, generating, onCreate }: { view: View; pid: stri
 
   return (
     <div ref={ref} className={`stage ${locked ? "" : "can-drag"}`} onPointerDown={down} onPointerMove={move} onPointerUp={up}>
-      <img src={`${url}?v=${ps.attempt ?? 0}`} alt="Key visual" draggable={false} />
+      <img src={src} alt="Key visual" draggable={false} onLoad={() => setShown(src)} className={shown === src ? "" : "loading"} />
+      {shown !== src && <div className="stage-loading"><Loader2 size={22} className="spin" /></div>}
       {guides && crops.map((c) => (
         <div key={c.k} className="crop-guide" style={{ left: `${c.x * 100}%`, top: `${c.y * 100}%`, width: `${c.w * 100}%`, height: `${c.h * 100}%` }}>
           <span>{c.label}</span>
@@ -234,7 +239,7 @@ function FocalStage({ view, pid, generating, onCreate }: { view: View; pid: stri
         </div>
       )}
       <div className="stage-toolbar" onPointerDown={(e) => e.stopPropagation()}>
-        <button className={guides ? "on" : ""} onClick={() => setGuides(!guides)}>Show crops</button>
+        <button className={guides ? "on" : ""} aria-pressed={guides} onClick={() => setGuides(!guides)}>{guides ? "Hide crops" : "Show crops"}</button>
       </div>
     </div>
   );
@@ -269,7 +274,7 @@ function MiniPreviews({ view, pid }: { view: View; pid: string }) {
                 {r && <img src={r.image} alt={`${f.label} preview`} />}
               </div>
               <div className="mini-label">
-                <span>{f.ratio}</span>
+                <span title={f.ratio}>{f.label}</span>
                 {r && worst !== "pass" && <span style={{ color: worst === "fail" ? "var(--fail)" : "var(--warn)", fontWeight: 650 }}>{worst === "fail" ? "Fix" : "Check"}</span>}
               </div>
             </div>

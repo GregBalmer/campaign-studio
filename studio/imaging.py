@@ -21,6 +21,8 @@ from . import config
 
 # Half-width and half-height of the product zone, as a share of the master.
 ZONE = (0.08, 0.2)
+# Bump when the layout rules change, so existing ads are rebuilt (and re-reviewed).
+LAYOUT_VERSION = 2
 
 NO_LINE_START = set("。、．，,.!?！？)」』）ー〜ゃゅょっャュョッ")
 BREAK_AFTER = set("のにをはがへともでや、。！？」』")

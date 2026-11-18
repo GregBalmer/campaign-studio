@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
-import { Check as CheckIcon, Loader2, X } from "lucide-react";
+import { AlertTriangle, Check as CheckIcon, Loader2, X } from "lucide-react";
 import type { Check, Status, View } from "./api";
 
 // ---------------------------------------------------------------- app context
@@ -7,7 +7,7 @@ import type { Check, Status, View } from "./api";
 export interface Ctx {
   view: View;
   setView: (v: View) => void;
-  /** Runs an action, shows its errors as a toast, tracks it as busy. */
+  /** Runs an action and tracks it as busy. Errors show as a toast, or in place for long-running work. */
   run: (key: string, fn: () => Promise<View | void>) => Promise<boolean>;
   busy: Set<string>;
   /** Resolves with the reviewer's name, asking for it once if needed. */
@@ -17,6 +17,10 @@ export interface Ctx {
   goTo: (step: number) => void;
   /** True when IT has connected a Slack channel for requests. */
   slack: boolean;
+  /** Errors that stay where they happened, keyed like `run`'s keys. */
+  errors: Record<string, string>;
+  retry: (key: string) => void;
+  dismissError: (key: string) => void;
 }
 
 export const AppCtx = createContext<Ctx | null>(null);
@@ -161,4 +165,21 @@ export function FormatGlyph({ ratio, h = 26 }: { ratio: string; h?: number }) {
   const [a, b] = ratio.split(":").map(Number);
   const w = Math.round((h * a) / b);
   return <span style={{ width: w > 46 ? 46 : w, height: w > 46 ? Math.round((46 * b) / a) : h }} />;
+}
+
+/** A failure that stays put, next to the thing that failed, until it's retried or dismissed. */
+export function ErrorNote({ k, action = "Try again" }: { k: string; action?: string }) {
+  const { errors, retry, dismissError, busy } = useApp();
+  const msg = errors[k];
+  if (!msg) return null;
+  return (
+    <div className="error-note" role="alert">
+      <AlertTriangle size={16} />
+      <span>{msg}</span>
+      <div className="error-note-actions">
+        <Button size="sm" busy={busy.has(k)} onClick={() => retry(k)}>{action}</Button>
+        <button className="error-note-close" aria-label="Dismiss" onClick={() => dismissError(k)}><X size={15} /></button>
+      </div>
+    </div>
+  );
 }

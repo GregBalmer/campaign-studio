@@ -9,6 +9,7 @@ import base64
 import io
 import json
 import socket
+import time
 import urllib.error
 import urllib.request
 
@@ -18,6 +19,7 @@ from .. import config
 from .base import Provider, ProviderError
 
 API = "https://api.openai.com/v1"
+RETRY_WAIT = 3  # seconds before the one automatic retry
 
 
 def _post(path: str, body: dict, timeout: int) -> dict:
@@ -30,18 +32,33 @@ def _post(path: str, body: dict, timeout: int) -> dict:
         headers={"Authorization": f"Bearer {key}", "Content-Type": "application/json"},
         method="POST",
     )
-    try:
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            return json.loads(resp.read().decode("utf-8"))
-    except urllib.error.HTTPError as e:
-        detail = ""
+    # A busy or briefly broken service usually answers on a second try, so retry once
+    # quietly before telling anyone. Bad keys, billing and policy refusals aren't retried.
+    for attempt in (1, 2):
         try:
-            detail = json.loads(e.read().decode("utf-8")).get("error", {}).get("message", "")
-        except Exception:
-            pass
-        raise ProviderError(_friendly(e.code, detail)) from None
-    except (urllib.error.URLError, socket.timeout, TimeoutError):
-        raise ProviderError("Couldn't reach OpenAI. Check the internet connection and try again.") from None
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError as e:
+            detail = ""
+            try:
+                detail = json.loads(e.read().decode("utf-8")).get("error", {}).get("message", "")
+            except Exception:
+                pass
+            low = detail.lower()
+            passing = e.code >= 500 or (e.code == 429 and "quota" not in low and "billing" not in low)
+            if attempt == 1 and passing:
+                time.sleep(RETRY_WAIT)
+                continue
+            raise ProviderError(_friendly(e.code, detail)) from None
+        except (urllib.error.URLError, ConnectionError):
+            if attempt == 1:
+                time.sleep(RETRY_WAIT)
+                continue
+            raise ProviderError("Couldn't reach OpenAI. Check the internet connection and try again.") from None
+        except (socket.timeout, TimeoutError):
+            # Don't double a long wait; a timed-out image request has already taken minutes.
+            raise ProviderError("OpenAI took too long to answer. Try again.") from None
+    raise ProviderError("Couldn't reach OpenAI. Try again.")
 
 
 def _friendly(status: int, detail: str) -> str:
