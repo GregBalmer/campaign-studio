@@ -249,6 +249,7 @@ def make_server(port: int) -> ThreadingHTTPServer:
     mimetypes.add_type("application/javascript", ".js")
     mimetypes.add_type("text/css", ".css")
     mimetypes.add_type("font/woff2", ".woff2")
+    mimetypes.add_type("application/manifest+json", ".webmanifest")
     if os.name == "nt":
         # Windows: SO_REUSEADDR lets a second server share the port; use exclusive binding.
         ThreadingHTTPServer.allow_reuse_address = False

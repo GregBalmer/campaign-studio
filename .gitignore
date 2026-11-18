@@ -8,3 +8,5 @@ web/node_modules/
 *.pdf
 HANDOFF*.md
 .DS_Store
+.snapshots/
+.smoke-profile/

@@ -212,6 +212,21 @@ export const MARKET_PRESETS: Market[] = [
   { region: "NL", name: "Netherlands", language: "nl" },
 ];
 
+/** Markets the brand hasn't launched in yet. Each needs a one-time setup
+ *  before it can be offered; the app shows what that involves. */
+export interface NewMarket extends Market {
+  languageName: string;
+  script: string;
+  font: string;
+  rtl?: boolean;
+}
+
+export const NEW_MARKETS: NewMarket[] = [
+  { region: "KR", name: "South Korea", language: "ko", languageName: "Korean", script: "Hangul", font: "Noto Sans KR" },
+  { region: "CN", name: "China", language: "zh", languageName: "Simplified Chinese", script: "Simplified Chinese characters", font: "Noto Sans SC" },
+  { region: "SA", name: "Saudi Arabia", language: "ar", languageName: "Arabic", script: "Arabic script", font: "Noto Sans Arabic", rtl: true },
+];
+
 export function restrictedHits(text: string, lang: string, brief: Brief): string[] {
   const words = brief.banned_words?.[lang] ?? [];
   const lower = text.toLowerCase();

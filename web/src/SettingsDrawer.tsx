@@ -36,12 +36,12 @@ export default function SettingsDrawer({ providers, setProviders, onClose }: {
         </button>
       ))}
 
-      <button className="option" disabled>
+      <button className="option firefly" disabled>
         <span className="radio" />
         <span>
-          <span className="option-title">Adobe Firefly <Lock size={13} /></span>
+          <span className="option-title">Adobe Firefly <span className="badge adobe">For production</span> <Lock size={13} /></span>
           <span className="option-detail" style={{ display: "block" }}>
-            Commercially safe images from your company's Firefly Services licence. Connected by your Adobe team
+            Adobe's image models, designed to be commercially safe, under your company's Firefly Services licence. Connected by your Adobe team
             during setup, with your organisation's credentials.
           </span>
         </span>

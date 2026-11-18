@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, ImagePlus, Plus, Sparkles, Trash2, X } from "lucide-react";
-import { api, LANGUAGE_NAMES, MARKET_PRESETS, photoUrl, restrictedHits, type Brief, type Market, type Product } from "../api";
-import { Button, FormatGlyph, useApp, useDebounced, useDismiss } from "../ui";
+import { api, LANGUAGE_NAMES, MARKET_PRESETS, NEW_MARKETS, photoUrl, restrictedHits, type Brief, type Market, type NewMarket, type Product } from "../api";
+import { Button, FormatGlyph, Modal, useApp, useDebounced, useDismiss } from "../ui";
 
 export default function BriefStep() {
   const { view, setView, run, busy, goTo, reviewer, toast } = useApp();
@@ -224,24 +224,97 @@ export default function BriefStep() {
 
 function AddMarket({ existing, onAdd }: { existing: Market[]; onAdd: (m: Market) => void }) {
   const [open, setOpen] = useState(false);
+  const [setup, setSetup] = useState<NewMarket | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   useDismiss(ref, open, () => setOpen(false));
   const options = MARKET_PRESETS.filter((m) => !existing.some((e) => e.region === m.region));
-  if (!options.length) return null;
   return (
     <span className="add-market" ref={ref}>
       <Button kind="ghost" icon={<Plus size={16} />} onClick={() => setOpen(!open)} style={{ height: 38 }}
         aria-expanded={open} aria-haspopup="menu">Add market</Button>
       {open && (
-        <div className="menu">
+        <div className="menu" role="menu">
+          {options.length > 0 && <div className="menu-heading">Ready to use</div>}
           {options.map((m) => (
-            <button key={m.region} className="menu-item" onClick={() => { onAdd(m); setOpen(false); }}>
+            <button key={m.region} role="menuitem" className="menu-item" onClick={() => { onAdd(m); setOpen(false); }}>
               {m.name} <span className="muted">{LANGUAGE_NAMES[m.language]}</span>
+            </button>
+          ))}
+          <div className="menu-heading">New to the brand <span className="muted">· one-time setup</span></div>
+          {NEW_MARKETS.map((m) => (
+            <button key={m.region} role="menuitem" className="menu-item" onClick={() => { setSetup(m); setOpen(false); }}>
+              {m.name} <span className="badge">Set up</span>
             </button>
           ))}
         </div>
       )}
+      {setup && <MarketSetup market={setup} onClose={() => setSetup(null)} />}
     </span>
+  );
+}
+
+/** What it takes to launch somewhere the brand hasn't been before. */
+function MarketSetup({ market: m, onClose }: { market: NewMarket; onClose: () => void }) {
+  const { view, toast } = useApp();
+  const brand = view.brief.brand.name;
+  const steps: { title: string; who: string; body: string }[] = [
+    {
+      title: `A typeface for ${m.languageName}`,
+      who: "Your Adobe or IT team, once",
+      body: `${m.script} isn't covered by ${brand}'s current fonts, so the app won't offer ${m.name} yet rather than print empty boxes. `
+        + `Add ${m.font} (free, from Google Fonts, SIL Open Font Licence) or ${brand}'s licensed ${m.languageName} typeface. Nobody on the creative team downloads anything.`
+        + (m.rtl ? ` ${m.languageName} reads right to left, so layouts mirror too: the message card and logo move to the right. That's a one-time template change.` : ""),
+    },
+    {
+      title: `Someone who reads ${m.languageName}`,
+      who: "Your local marketing team",
+      body: `They approve the message in step 3. "What it says" helps everyone else follow along, but a native reader signs off.`,
+    },
+    {
+      title: "Restricted words and claims",
+      who: `Legal, for ${m.name}`,
+      body: `The list of words and claims to avoid in ${m.languageName}. It goes into the brand kit and is checked automatically on every ad, as English and Japanese are today.`,
+    },
+    {
+      title: "Local advertising rules",
+      who: `Legal or your agency in ${m.name}`,
+      body: "Ad rules differ by country: what a product may claim (sun-protection and skincare claims are regulated in many markets), required disclaimers, "
+        + "and in some places approval before an ad runs. They're confirmed before launch; any wording that must appear on the ad becomes part of the template.",
+    },
+    {
+      title: "Local assets, if needed",
+      who: "Brand team",
+      body: "Imagery that fits the market (people, settings, seasons), local product names, and any logo variant used there.",
+    },
+  ];
+  const copy = () => {
+    const text = `Launching ${brand} in ${m.name}: what we need\n\n` +
+      steps.map((s, i) => `${i + 1}. ${s.title} (${s.who})\n   ${s.body}`).join("\n\n");
+    navigator.clipboard?.writeText(text).then(() => toast("Checklist copied. Paste it into an email or ticket."),
+      () => toast("Couldn't copy. Select the text instead.", "error"));
+  };
+  return (
+    <Modal onClose={onClose}>
+      <div className="setup-modal">
+        <h2>Launching in {m.name}</h2>
+        <p className="muted" style={{ marginTop: 0, lineHeight: 1.5 }}>
+          {brand} hasn't run in {m.name} before. Here's what's set up once, and by whom. After that, {m.name} joins the ready list and
+          the workflow is exactly the same.
+        </p>
+        <ol className="setup-list">
+          {steps.map((s) => (
+            <li key={s.title}>
+              <div className="setup-title">{s.title} <span className="badge">{s.who}</span></div>
+              <div className="setup-body">{s.body}</div>
+            </li>
+          ))}
+        </ol>
+        <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+          <Button kind="ghost" onClick={onClose}>Close</Button>
+          <Button kind="primary" onClick={copy}>Copy checklist</Button>
+        </div>
+      </div>
+    </Modal>
   );
 }
 

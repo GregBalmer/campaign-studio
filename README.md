@@ -44,6 +44,10 @@ Click **Create key visuals** and follow the steps. With no API key it runs in **
 
 > **If something goes wrong**, the terminal says what to do in plain words. The most common one: the Mac asks to install "command line developer tools" the first time you type `python3`. Say yes, then run `python3 start.py` again.
 
+**Windows, Mac or Linux.** A GitHub workflow ([`fresh-install.yml`](.github/workflows/fresh-install.yml)) installs and runs Campaign Studio from a fresh copy on all three, on every push, with no API key. It walks the whole flow, checks the download, and saves a screenshot of the app as it renders on each machine.
+
+**Want it in its own window?** In Chrome or Edge, click the install icon in the address bar (or **⋮ → Install Campaign Studio**). You get an app window and a dock or taskbar icon. It still needs `start.py` running, the same as the browser tab.
+
 ---
 
 ## A walk through the four steps
@@ -105,6 +109,19 @@ outputs/long-light/
 }
 ```
 
+## Launching in a new market
+
+**Add market** lists two kinds of market. **Ready to use** markets work straight away. **New to the brand** markets (South Korea, China, Saudi Arabia in the sample) open a checklist instead of half-working: what's set up once, and by whom.
+
+- **A typeface for the script.** For example, Noto Sans KR for Korean. Your Adobe or IT team adds it once; the creative team downloads nothing. The app won't offer a market whose script it can't set, rather than print empty boxes.
+- **Right-to-left markets** such as Saudi Arabia also need a one-time mirrored layout.
+- **A native reader** to approve the message.
+- **Legal's restricted words and claims** for that market. These are checked automatically from then on.
+- **Local advertising rules:** claims, disclaimers and any pre-approval, confirmed by local legal or the agency.
+- **Local assets** where they matter.
+
+**Copy checklist** puts the list on the clipboard, ready for an email or a ticket.
+
 ## The checks
 
 Every ad is checked automatically. Each failure says where it is on the ad and how to fix it.
@@ -160,11 +177,12 @@ This proof of concept doesn't include a Firefly adapter, because I don't have Fi
 - **The product box starts as a guess.** Demo images report exactly where the product is. For OpenAI images and supplied photos, the box starts at a sensible default (or the `photo_focal` and `photo_zone` given in the brief), and a person fits it in step 2.
 - **Translations vary from run to run.** That's why a person approves each one, sees what it says in English, and can edit it.
 - **Restricted words are a simple list per language.** It's a stand-in for a real legal-review service, not a replacement.
-- **Fonts:** Inter (Latin) and Noto Sans JP (Japanese) are bundled under the SIL Open Font Licence, so output is identical on any machine. Korean and Chinese need their own Noto fonts added before those markets are offered.
+- **Fonts:** Inter (Latin) and Noto Sans JP (Japanese) are bundled under the SIL Open Font Licence, so output is identical on any machine. Other scripts are added per market (see *Launching in a new market*).
+- **Branding:** Adobe red is the app's single accent, used in the interface chrome only, never on or around the ads. No Adobe logos are used, so nothing implies Adobe made or endorses this proof of concept.
 - **Demo images are illustrations,** drawn locally to make the flow free to try. The report labels them `mock`.
 - **The sample's "client-supplied" product photo** (`samples/long-light/assets/daylight-mist.png`) was itself generated with OpenAI for this demo. Solvane is a fictional brand.
 - **Performance insights** (CTR and conversions by variant, goal 5 in the brief) aren't covered. `report.json` gives each ad a stable identity, which is what a later analytics join would use.
-- **Tested on:** macOS with Python 3.9 (the version macOS ships) and Python 3.12, from a clean copy with and without an API key. Windows should work but hasn't been tested.
+- **Tested on:** macOS by hand with Python 3.9 (the version macOS ships) and 3.12, from a clean copy with and without an API key. Windows, Linux and macOS automatically through the fresh-install workflow.
 
 ---
 
@@ -183,7 +201,8 @@ studio/
   fonts/              Inter, Noto Sans JP (OFL)
 web/                  React + Vite interface; built output committed in web/dist
 samples/long-light/   the sample brief, logo and product photo
-tools/                scripts that made the sample assets, and a contact-sheet helper
+tools/                smoke_test.py (fresh-install test used by CI), sample-asset scripts, a contact-sheet helper
+.github/workflows/    fresh-install.yml: the Windows / macOS / Linux test
 ```
 
 **Changing the interface** needs Node 18 or newer:

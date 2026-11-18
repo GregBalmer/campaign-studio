@@ -129,10 +129,9 @@ export default function App() {
     <AppCtx.Provider value={ctx}>
       <header className="topbar">
         <div className="wordmark">
-          <span className="wordmark-mark">
-            <svg width="16" height="16" viewBox="0 0 32 32"><path d="M4 20a12 12 0 0 1 24 0z" fill="#FF7A59" /><rect x="4" y="23" width="24" height="3" fill="#FF7A59" /></svg>
-          </span>
+          <span className="wordmark-mark"><AppMark /></span>
           Campaign Studio
+          <span className="tagline">Built for Adobe Firefly Services</span>
         </div>
         <span className="divider-v" />
         <div style={{ position: "relative" }} ref={switcher}>
@@ -228,6 +227,17 @@ export default function App() {
         </div>
       )}
     </AppCtx.Provider>
+  );
+}
+
+/** One frame becoming many sizes. Deliberately unlike any client brand mark. */
+export function AppMark({ size = 16 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="3" y="10" width="15" height="15" rx="3" fill="#fff" opacity="0.55" />
+      <rect x="14" y="5" width="10" height="18" rx="3" fill="#fff" opacity="0.8" />
+      <rect x="9" y="17" width="20" height="11" rx="3" fill="#fff" />
+    </svg>
   );
 }
 
