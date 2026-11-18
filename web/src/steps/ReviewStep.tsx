@@ -273,15 +273,15 @@ function Lightbox({ keys, current, onMove, onClose }: { keys: string[]; current:
               <Button className="btn-block" onClick={() => decide(null)} busy={busy.has("decide")}>Change decision</Button>
             ) : (
               <>
-                <Button kind="danger" className="btn-block" icon={<X size={16} />} title="Reject (R)" onClick={() => decide("rejected")} busy={busy.has("decide")}>Reject</Button>
+                <Button kind="danger" className="btn-block" icon={<X size={16} />} title="Reject (R)" onClick={() => decide("rejected")} busy={busy.has("decide")}>Reject <kbd>R</kbd></Button>
                 <Button kind="approve" className="btn-block" icon={<Check size={16} strokeWidth={2.6} />} disabled={f.status === "fail"}
-                  title={f.status === "fail" ? "Fix the failed check first" : "Approve (A)"} onClick={() => decide("approved")} busy={busy.has("decide")}>Approve</Button>
+                  title={f.status === "fail" ? "Fix the failed check first" : "Approve (A)"} onClick={() => decide("approved")} busy={busy.has("decide")}>Approve <kbd>A</kbd></Button>
               </>
             )}
           </div>
           <div className="row" style={{ justifyContent: "space-between" }}>
-            <Button kind="ghost" size="sm" icon={<ArrowLeft size={15} />} onClick={() => move(-1)}>Previous</Button>
-            <Button kind="ghost" size="sm" onClick={() => move(1)}>Next <ArrowRight size={15} /></Button>
+            <Button kind="ghost" size="sm" icon={<ArrowLeft size={15} />} onClick={() => move(-1)} title="Previous ad (←)">Previous</Button>
+            <Button kind="ghost" size="sm" onClick={() => move(1)} title="Next ad (→)">Next <ArrowRight size={15} /></Button>
           </div>
         </div>
       </div>

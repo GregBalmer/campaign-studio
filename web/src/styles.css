@@ -497,3 +497,10 @@ a.btn { text-decoration: none; }
 .error-note-close:hover { background: var(--hover); }
 
 .stat-flag { font-style: normal; color: var(--warn); font-weight: 600; }
+
+/* A quiet key label inside a button: tells you the shortcut without another line of text. */
+.btn kbd {
+  font: 600 11px/1 var(--font, inherit); min-width: 18px; height: 18px; padding: 0 5px; margin-left: 4px;
+  display: inline-grid; place-items: center; border-radius: 5px;
+  border: 1px solid currentColor; opacity: 0.55;
+}
