@@ -3,13 +3,14 @@
     python tools/smoke_test.py [--screenshot out.png]
 
 Runs start.py exactly as a reviewer would (no API key), waits for it to come
-up, walks the whole four-step flow through the API in demo mode, checks the
+up, signs in as a demo person, walks the whole four-step flow through the API in demo mode, checks the
 download and the interface, runs the command-line version, and optionally saves
 a screenshot of the review screen with a local Chrome or Edge. GitHub Actions
 runs this on Windows, macOS and Linux.
 """
 from __future__ import annotations
 
+import http.cookiejar
 import io
 import json
 import os
@@ -20,6 +21,7 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
 import urllib.request
 import zipfile
 from pathlib import Path
@@ -33,11 +35,15 @@ def log(msg: str) -> None:
     print(f"[smoke] {msg}", flush=True)
 
 
+# Keeps the sign-in cookie between calls, like a browser.
+OPENER = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
+
+
 def call(base: str, method: str, path: str, body: dict | None = None):
     req = urllib.request.Request(base + path, method=method,
                                  data=json.dumps(body).encode() if body is not None else None,
                                  headers={"Content-Type": "application/json"})
-    with urllib.request.urlopen(req, timeout=120) as r:
+    with OPENER.open(req, timeout=120) as r:
         data = r.read()
         return json.loads(data) if r.headers.get("Content-Type", "").startswith("application/json") else data
 
@@ -114,7 +120,20 @@ def main() -> int:
         assert b"<title>Campaign Studio</title>" in page, "interface not served"
         assert b"manifest.webmanifest" in page
 
-        by = {"by": "Smoke Test"}
+        try:
+            call(url, "GET", "/api/campaigns")
+            raise SystemExit("the app answered without signing in")
+        except urllib.error.HTTPError as e:
+            assert e.code == 401, f"expected 401 before sign-in, got {e.code}"
+        try:
+            call(url, "POST", "/api/auth/login", {"email": "sam@solvane.example", "password": "wrong"})
+            raise SystemExit("a wrong password was accepted")
+        except urllib.error.HTTPError as e:
+            assert e.code == 401
+        me = call(url, "POST", "/api/auth/login", {"email": "sam@solvane.example", "password": "longlight"})
+        assert me["user"]["name"] == "Sam Rivera"
+        log("sign-in OK: locked until signed in, wrong password refused, demo account works")
+        by = {"by": "Someone Else"}  # ignored: approvals are stamped with the signed-in person
         call(base, "POST", "/provider", {"provider": "mock"})
         for pid in ("daylight-mist", "after-sun-gel"):
             call(base, "POST", f"/products/{pid}/master", by)
@@ -128,6 +147,8 @@ def main() -> int:
         assert not any(f["status"] == "fail" for f in frames.values()), "a sample ad failed its checks"
         for key, f in frames.items():
             call(base, "POST", "/decide", {**by, "key": key, "decision": "approved"})
+        v = call(base, "GET", "")
+        assert all(f["decision"]["by"] == "Sam Rivera" for f in v["frames"].values()), "approval not stamped with the signed-in person"
         z = zipfile.ZipFile(io.BytesIO(call(base, "GET", "/download?only=approved")))
         pngs = [n for n in z.namelist() if n.endswith(".png")]
         assert len(pngs) == 12 and "long-light/report.json" in z.namelist(), "download incomplete"

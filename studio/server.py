@@ -5,6 +5,7 @@ Binds to 127.0.0.1, so it is never reachable from other machines.
 from __future__ import annotations
 
 import base64
+import http.cookies
 import io
 import json
 import mimetypes
@@ -21,7 +22,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from . import config, pipeline, providers
+from . import auth, config, pipeline, providers
 from .pipeline import Campaign, StudioError, with_campaign
 from .providers import ProviderError
 
@@ -39,6 +40,7 @@ def _safe_file(base: Path, rel: str) -> Path | None:
 
 class Handler(BaseHTTPRequestHandler):
     server_version = "CampaignStudio/1.0"
+    user: dict | None = None  # the signed-in person, set per request
 
     def log_message(self, fmt, *args):  # keep the terminal quiet and friendly
         if args and str(args[1]).startswith(("4", "5")):
@@ -98,21 +100,57 @@ class Handler(BaseHTTPRequestHandler):
         path = urllib.parse.unquote(url.path)
         query = {k: v[0] for k, v in urllib.parse.parse_qs(url.query).items()}
         try:
+            if path.startswith("/api/auth/"):
+                return self._auth(method, path[10:].strip("/"))
+            if path.startswith(("/api/", "/files/")) and path != "/api/status":
+                self.user = auth.who(self._token())
+                if not self.user:
+                    return self._json({"error": "Sign in to continue.", "signin": True}, 401)
             if path.startswith("/api/"):
                 return self._api(method, path[5:].strip("/").split("/"), query)
             if path.startswith("/files/"):
                 return self._files(path[7:], query)
             return self._static(path)
+        except auth.AuthError as e:
+            self._error(str(e), 401)
         except (StudioError, ProviderError) as e:
             self._error(str(e), 400)
         except Exception:
             traceback.print_exc()
             self._error("Something went wrong on our side. The details are in the terminal window.", 500)
 
+    # ------------------------------------------------------------ sign-in
+    def _token(self) -> str | None:
+        jar = http.cookies.SimpleCookie()
+        try:
+            jar.load(self.headers.get("Cookie") or "")
+        except http.cookies.CookieError:
+            return None
+        return jar[auth.COOKIE].value if auth.COOKIE in jar else None
+
+    def _cookie(self, value: str, max_age: int) -> dict:
+        # HttpOnly: page scripts can't read it. SameSite=Strict: other sites can't use it.
+        return {"Set-Cookie": f"{auth.COOKIE}={value}; Path=/; HttpOnly; SameSite=Strict; Max-Age={max_age}"}
+
+    def _auth(self, method: str, action: str) -> None:
+        if action == "me" and method == "GET":
+            return self._json({"user": auth.who(self._token()), "demo": auth.demo_accounts()})
+        if action == "login" and method == "POST":
+            b = self._body()
+            token, user = auth.sign_in(b.get("email", ""), b.get("password", ""))
+            body = json.dumps({"user": user}).encode()
+            return self._send(200, body, "application/json; charset=utf-8",
+                              self._cookie(token, auth.SESSION_DAYS * 86400))
+        if action == "logout" and method == "POST":
+            auth.sign_out(self._token())
+            return self._send(200, b'{"user": null}', "application/json; charset=utf-8", self._cookie("", 0))
+        return self._error("Not found.", 404)
+
     # ------------------------------------------------------------ API
     def _api(self, method: str, parts: list[str], q: dict) -> None:
         b = self._body() if method in ("POST", "PATCH") and not (len(parts) > 2 and parts[2] == "upload") else {}
-        by = (b.get("by") or "").strip() or None
+        # Approvals are stamped with whoever is signed in, never a name the browser sends.
+        by = self.user["name"] if self.user else None
 
         if parts == ["status"]:
             from .notify import slack_webhook
@@ -174,7 +212,7 @@ class Handler(BaseHTTPRequestHandler):
                 return with_campaign(cid, lambda c: (c.set_focal(pid, float(b["x"]), float(b["y"]),
                                                                    b.get("w"), b.get("h")), view(c))[1])
             if action == "approve" and method == "POST":
-                return with_campaign(cid, lambda c: (c.approve_master(pid, by or "someone"), view(c))[1])
+                return with_campaign(cid, lambda c: (c.approve_master(pid, by), view(c))[1])
             if action == "reopen" and method == "POST":
                 return with_campaign(cid, lambda c: (c.reopen_master(pid, by), view(c))[1])
 
@@ -187,7 +225,7 @@ class Handler(BaseHTTPRequestHandler):
             if len(rest) == 2 and method == "POST":
                 return with_campaign(cid, lambda c: (c.edit_copy(lang, b.get("text", ""), by), view(c))[1])
             if len(rest) == 3 and rest[2] == "approve" and method == "POST":
-                return with_campaign(cid, lambda c: (c.approve_copy(lang, by or "someone"), view(c))[1])
+                return with_campaign(cid, lambda c: (c.approve_copy(lang, by), view(c))[1])
             if len(rest) == 3 and rest[2] == "reopen" and method == "POST":
                 return with_campaign(cid, lambda c: (c.reopen_copy(lang, by), view(c))[1])
 
@@ -213,7 +251,7 @@ class Handler(BaseHTTPRequestHandler):
             return with_campaign(cid, lambda c: (c.fan_out(by), view(c))[1])
 
         if head == "decide" and method == "POST":
-            return with_campaign(cid, lambda c: (c.decide(b["key"], b.get("decision"), by or "someone",
+            return with_campaign(cid, lambda c: (c.decide(b["key"], b.get("decision"), by,
                                                           b.get("note", "")), view(c))[1])
 
         if head == "download" and method == "GET":

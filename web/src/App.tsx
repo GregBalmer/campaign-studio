@@ -1,7 +1,8 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Check, ChevronDown, History, Plus, RotateCcw, Settings2, UserRound, X } from "lucide-react";
-import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, type CampaignSummary, type ProviderInfo, type View } from "./api";
-import { AppCtx, Button, Drawer, Modal, clock, useDismiss, type Ctx } from "./ui";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { Check, ChevronDown, History, LogOut, Plus, RotateCcw, Settings2, UserRound, X } from "lucide-react";
+import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderInfo, type View } from "./api";
+import { AppCtx, Button, Drawer, clock, useDismiss, type Ctx } from "./ui";
+import SignIn from "./SignIn";
 import BriefStep from "./steps/BriefStep";
 import KeyVisualStep from "./steps/KeyVisualStep";
 import MessageStep from "./steps/MessageStep";
@@ -38,12 +39,21 @@ export default function App() {
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [toastMsg, setToast] = useState<{ msg: string; kind: "info" | "error" } | null>(null);
   const [loadError, setLoadError] = useState<string | null>(null);
-  const [reviewerName, setReviewerName] = useState(store("studio.reviewer") || "");
-  const [askName, setAskName] = useState<((n: string) => void) | null>(null);
-  const [panel, setPanel] = useState<"settings" | "history" | "campaigns" | null>(null);
+  // undefined while checking; null when nobody is signed in.
+  const [me, setMe] = useState<Person | null | undefined>(undefined);
+  const [demo, setDemo] = useState<DemoAccount[]>([]);
+  const [panel, setPanel] = useState<"settings" | "history" | "campaigns" | "account" | null>(null);
   const toastTimer = useRef<number>();
   const switcher = useRef<HTMLDivElement>(null);
+  const account = useRef<HTMLDivElement>(null);
   useDismiss(switcher, panel === "campaigns", () => setPanel(null));
+  useDismiss(account, panel === "account", () => setPanel(null));
+
+  useEffect(() => {
+    setSignedOutHandler(() => setMe(null));
+    api.me().then((r) => { setDemo(r.demo); setMe(r.user); })
+      .catch((e) => setLoadError(e instanceof Error ? e.message : String(e)));
+  }, []);
 
   const toast = useCallback((msg: string, kind: "info" | "error" = "info") => {
     setToast({ msg, kind });
@@ -62,6 +72,7 @@ export default function App() {
   }, []);
 
   useEffect(() => {
+    if (!me) return;
     (async () => {
       try {
         const [list, status] = await Promise.all([api.campaigns(), api.status()]);
@@ -72,10 +83,11 @@ export default function App() {
         const id = list.find((c) => c.id === last)?.id ?? list.find((c) => c.sample)?.id ?? list[0]?.id;
         if (id) await open(id);
       } catch (e) {
+        if (e instanceof ApiError && e.message.startsWith("Sign in")) return;
         setLoadError(e instanceof Error ? e.message : String(e));
       }
     })();
-  }, [open]);
+  }, [open, me]);
 
   const loaded = view !== null;
   useEffect(() => {
@@ -138,13 +150,22 @@ export default function App() {
     setErrors((e) => { const n = { ...e }; delete n[key]; return n; });
   }, []);
 
-  const reviewer = useCallback(() => {
-    if (reviewerName) return Promise.resolve(reviewerName);
-    return new Promise<string>((resolve) => setAskName(() => resolve));
-  }, [reviewerName]);
+  // Approvals are stamped on the server with whoever is signed in; this is just for display.
+  const reviewerName = me?.name ?? "";
+  const reviewer = useCallback(() => Promise.resolve(reviewerName), [reviewerName]);
+
+  const signOut = async () => {
+    setPanel(null);
+    await api.signOut().catch(() => {});
+    setView(null);
+    setMe(null);
+  };
 
   const refreshCampaigns = async () => setCampaigns(await api.campaigns());
 
+  if (me === null) {
+    return <SignIn demo={demo} onSignedIn={(p) => { setMe(p); setLoadError(null); }} />;
+  }
   if (loadError) {
     return <div className="empty"><h2>Campaign Studio isn't responding</h2><p>{loadError}</p></div>;
   }
@@ -212,9 +233,21 @@ export default function App() {
         <button className="chip-button" onClick={() => setPanel("history")} title="Approval history">
           <History size={15} /> History
         </button>
-        <button className="chip-button" onClick={() => setAskName(() => () => {})} title="Change reviewer">
-          <UserRound size={15} /> {reviewerName || "Add your name"}
-        </button>
+        <div style={{ position: "relative" }} ref={account}>
+          <button className="chip-button" aria-expanded={panel === "account"} onClick={() => setPanel(panel === "account" ? null : "account")}>
+            <UserRound size={15} /> {reviewerName}
+          </button>
+          {panel === "account" && me && (
+            <div className="menu user-menu">
+              <div className="user-menu-head">
+                <b>{me.name}</b>
+                <span className="muted small">{me.email}{me.role && ` · ${me.role}`}</span>
+              </div>
+              <div style={{ borderTop: "1px solid var(--line)", margin: "4px 0" }} />
+              <button className="menu-item" onClick={signOut}><span className="row"><LogOut size={15} /> Sign out</span></button>
+            </div>
+          )}
+        </div>
       </header>
 
       <nav className="stepper" aria-label="Steps">
@@ -257,13 +290,6 @@ export default function App() {
             </div>
           ))}
         </Drawer>
-      )}
-      {askName && (
-        <NameModal
-          initial={reviewerName}
-          onSave={(n) => { store("studio.reviewer", n); setReviewerName(n); askName(n); setAskName(null); }}
-          onClose={() => setAskName(null)}
-        />
       )}
       {toastMsg && (
         <div className={`toast ${toastMsg.kind}`} role="status">
@@ -353,25 +379,5 @@ function CampaignMenu({ campaigns, current, sample, onPick, onNew, onReset, onCl
         <button className="menu-item" onClick={onReset}><span className="row"><RotateCcw size={15} /> Start the sample over</span></button>
       )}
     </div>
-  );
-}
-
-function NameModal({ initial, onSave, onClose }: { initial: string; onSave: (n: string) => void; onClose: () => void }) {
-  const [n, setN] = useState(initial);
-  const valid = useMemo(() => n.trim().length >= 2, [n]);
-  return (
-    <Modal onClose={onClose}>
-      <h2>Who's reviewing?</h2>
-      <p className="muted" style={{ marginTop: 0, lineHeight: 1.5 }}>
-        Approvals are signed with your name and the time, so the team can see who signed off on what.
-      </p>
-      <form onSubmit={(e) => { e.preventDefault(); if (valid) onSave(n.trim()); }}>
-        <input className="input" autoFocus placeholder="Your name" value={n} onChange={(e) => setN(e.target.value)} />
-        <div className="row" style={{ marginTop: 18, justifyContent: "flex-end" }}>
-          <Button kind="ghost" type="button" onClick={onClose}>Cancel</Button>
-          <Button kind="primary" type="submit" disabled={!valid}>Continue</Button>
-        </div>
-      </form>
-    </Modal>
   );
 }

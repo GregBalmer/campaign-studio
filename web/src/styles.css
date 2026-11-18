@@ -504,3 +504,14 @@ a.btn { text-decoration: none; }
   display: inline-grid; place-items: center; border-radius: 5px;
   border: 1px solid currentColor; opacity: 0.55;
 }
+
+/* ---------------------------------------------------------------- sign-in */
+.signin { min-height: 100vh; display: grid; place-items: center; padding: 32px 16px; }
+.signin-card { width: min(452px, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 20px; padding: 32px; box-shadow: var(--shadow-lg); }
+.signin-card h1 { margin: 0 0 4px; font-size: 26px; letter-spacing: -0.02em; }
+.signin-card > p.muted { margin: 0; }
+.signin-card > p.signin-demo { margin: 20px 0 0; line-height: 1.55; padding: 12px 14px; border-radius: 12px; background: var(--surface-2); border: 1px solid var(--line); }
+.signin-demo code { font-size: 12.5px; }
+.user-menu { right: 0; left: auto; min-width: 240px; }
+.user-menu-head { padding: 10px 10px 8px; }
+.user-menu-head b { display: block; }

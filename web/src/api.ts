@@ -131,6 +131,13 @@ export interface CampaignSummary {
 
 export class ApiError extends Error {}
 
+export interface Person { email: string; name: string; role: string }
+export interface DemoAccount extends Person { password: string }
+
+/** Called when the server says the session has ended, so the app can show sign-in. */
+let onSignedOut: () => void = () => {};
+export const setSignedOutHandler = (fn: () => void) => { onSignedOut = fn; };
+
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   let res: Response;
   try {
@@ -143,11 +150,15 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     throw new ApiError("Can't reach Campaign Studio. Is the window running start.py still open?");
   }
   const data = await res.json().catch(() => ({}));
+  if (res.status === 401 && data.signin) onSignedOut();
   if (!res.ok) throw new ApiError(data.error || `Something went wrong (${res.status}).`);
   return data as T;
 }
 
 export const api = {
+  me: () => call<{ user: Person | null; demo: DemoAccount[] }>("GET", "auth/me"),
+  signIn: (email: string, password: string) => call<{ user: Person }>("POST", "auth/login", { email, password }),
+  signOut: () => call<{ user: null }>("POST", "auth/logout"),
   status: () => call<{ providers: ProviderInfo[]; default_provider: string; slack: boolean }>("GET", "status"),
   saveKey: (key: string) => call<{ providers: ProviderInfo[] }>("POST", "settings/key", { key }),
   campaigns: () => call<CampaignSummary[]>("GET", "campaigns"),

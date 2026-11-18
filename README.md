@@ -38,7 +38,26 @@ On Windows, use `py start.py`.
 
 The first run takes about 30 seconds while it sets itself up; after that it starts instantly. Your browser opens on a ready-made sample campaign. Press **Ctrl+C** in the terminal to stop it. Your work is saved, and you can pick up where you left off.
 
-**3. Try it**
+**3. Sign in**
+
+Every approval is stamped with the person who's signed in, so the app asks you to sign in first. For the sample, a demo account is already filled in: just click **Sign in**. There are two:
+
+| Email | Password | Who |
+|---|---|---|
+| `sam@solvane.example` | `longlight` | Sam Rivera, creative lead |
+| `aiko@solvane.example` | `longlight` | Aiko Tanaka, Japanese reviewer |
+
+To add real people (each gets their own password; only a salted hash is stored):
+
+```bash
+python3 tools/team.py add "Full Name" name@company.com "Role"
+python3 tools/team.py list
+python3 tools/team.py remove sam@solvane.example
+```
+
+In production, sign-in comes from the client's single sign-on (Adobe, Okta or Microsoft) instead.
+
+**4. Try it**
 
 Click **Create key visuals** and follow the steps. With no API key it runs in **Demo mode**: images are drawn locally, instantly and for free, so you can try the whole flow. When you want real images, click the **Demo images** button at the top, paste an OpenAI API key, and you're done. The key is checked and saved on your computer only.
 
@@ -152,6 +171,8 @@ An ad that **fails** a check can't be approved. A **warning** is the reviewer's 
 
 **Built to be run by the client, not by engineers.** One command, one dependency (Pillow), and the interface comes pre-built, so there's no Node or npm for the reviewer. It runs locally on `127.0.0.1` only. Errors are written for a creative team ("OpenAI didn't accept the key. Check it in Settings."), not as stack traces.
 
+**Approvals belong to a signed-in person.** The server stamps every approval, rejection and edit with whoever is signed in; it ignores any name the browser sends. Sessions are random tokens in an HttpOnly, SameSite=Strict cookie, and passwords are stored as salted PBKDF2 hashes in `workspace/team.json`. It's a stand-in for the client's single sign-on, built so that the audit trail in `report.json` means something.
+
 **The same pipeline drives the app and the command line.** For batch runs or automation:
 
 ```bash
@@ -173,6 +194,7 @@ This proof of concept doesn't include a Firefly adapter, because I don't have Fi
 - **Storage is a local folder.** The brief mentions Azure, AWS or Dropbox. Outputs are written by one function (`Campaign.fan_out`) and served by another, so a cloud bucket is a contained change, but it isn't built.
 - **The product box starts as a guess.** Demo images report exactly where the product is. For OpenAI images and supplied photos, the box starts at a sensible default (or the `photo_focal` and `photo_zone` given in the brief), and a person fits it in step 2.
 - **Translations vary from run to run.** That's why a person approves each one, sees what it says in English, and can edit it.
+- **Sign-in is local.** People are kept in `workspace/team.json` on the machine running the app. There are no roles yet: anyone signed in can approve anything. Production would use the client's single sign-on and give, say, only the Japanese reviewer the right to approve Japanese.
 - **Restricted words are a simple list per language.** It's a stand-in for a real legal-review service, not a replacement.
 - **Fonts:** Inter (Latin) and Noto Sans JP (Japanese) are bundled under the SIL Open Font Licence, so output is identical on any machine. Other scripts are added per market (see *Launching in a new market*).
 - **Branding:** Adobe red is the app's single accent, used in the interface chrome only, never on or around the ads. No Adobe logos are used, so nothing implies Adobe made or endorses this proof of concept.
@@ -195,9 +217,12 @@ studio/
   brief.py            brief validation in plain language
   providers/          mock.py, openai_provider.py: the generator swap point
   server.py           local JSON API + static UI (standard library only)
+  auth.py             sign-in: team, hashed passwords, sessions
   fonts/              Inter, Noto Sans JP (OFL)
 web/                  React + Vite interface; built output committed in web/dist
 samples/long-light/   the sample brief, logo and product photo
+samples/team.json     the demo people, copied to workspace/team.json on first run
+tools/team.py         add, list or remove the people who can sign in
 tools/                smoke_test.py (fresh-install test used by CI), sample-asset scripts, a contact-sheet helper
 .github/workflows/    fresh-install.yml: the Windows / macOS / Linux test
 ```

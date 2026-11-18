@@ -1,0 +1,7 @@
+{
+  "_note": "Fictional demo people for trying the sample. They're copied into workspace/team.json the first time the app runs. Add real people with: python3 tools/team.py add \"Full Name\" name@company.com",
+  "people": [
+    {"name": "Sam Rivera", "role": "Creative lead", "email": "sam@solvane.example", "password": "longlight"},
+    {"name": "Aiko Tanaka", "role": "Japanese reviewer", "email": "aiko@solvane.example", "password": "longlight"}
+  ]
+}
