@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, ImagePlus, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { ArrowRight, Check, ChevronRight, Copy, ImagePlus, Mail, MessageSquare, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { api, LANGUAGE_NAMES, MARKET_PRESETS, NEW_MARKETS, photoUrl, restrictedHits, type Brief, type Market, type NewMarket, type Product } from "../api";
-import { Button, FormatGlyph, Modal, useApp, useDebounced, useDismiss } from "../ui";
+import { Button, FormatGlyph, Modal, timeAgo, useApp, useDebounced, useDismiss } from "../ui";
 
 export default function BriefStep() {
   const { view, setView, run, busy, goTo, reviewer, toast } = useApp();
@@ -223,6 +223,7 @@ export default function BriefStep() {
 }
 
 function AddMarket({ existing, onAdd }: { existing: Market[]; onAdd: (m: Market) => void }) {
+  const { view } = useApp();
   const [open, setOpen] = useState(false);
   const [setup, setSetup] = useState<NewMarket | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
@@ -240,78 +241,104 @@ function AddMarket({ existing, onAdd }: { existing: Market[]; onAdd: (m: Market)
               {m.name} <span className="muted">{LANGUAGE_NAMES[m.language]}</span>
             </button>
           ))}
-          <div className="menu-heading">New to the brand <span className="muted">· one-time setup</span></div>
-          {NEW_MARKETS.map((m) => (
-            <button key={m.region} role="menuitem" className="menu-item" onClick={() => { setSetup(m); setOpen(false); }}>
-              {m.name} <span className="badge">Set up</span>
-            </button>
-          ))}
+          <div className="menu-heading">New to {view.brief.brand.name}</div>
+          {NEW_MARKETS.map((m) => {
+            const req = view.market_requests?.[m.region];
+            return (
+              <button key={m.region} role="menuitem" className="menu-item" onClick={() => { setSetup(m); setOpen(false); }}>
+                {m.name}
+                {req ? <span className="badge ok">Requested</span> : <span className="badge">Request</span>}
+              </button>
+            );
+          })}
         </div>
       )}
-      {setup && <MarketSetup market={setup} onClose={() => setSetup(null)} />}
+      {setup && <MarketRequest market={setup} onClose={() => setSetup(null)} />}
     </span>
   );
 }
 
-/** What it takes to launch somewhere the brand hasn't been before. */
-function MarketSetup({ market: m, onClose }: { market: NewMarket; onClose: () => void }) {
-  const { view, toast } = useApp();
+/** Asking for a market the brand hasn't launched in. The user's job is one
+ *  message; the people who do the setup get the details. */
+function MarketRequest({ market: m, onClose }: { market: NewMarket; onClose: () => void }) {
+  const { view, run, busy, reviewer, toast, slack } = useApp();
   const brand = view.brief.brand.name;
-  const steps: { title: string; who: string; body: string }[] = [
-    {
-      title: `A typeface for ${m.languageName}`,
-      who: "Your Adobe or IT team, once",
-      body: `${m.script} isn't covered by ${brand}'s current fonts, so the app won't offer ${m.name} yet rather than print empty boxes. `
-        + `Add ${m.font} (free, from Google Fonts, SIL Open Font Licence) or ${brand}'s licensed ${m.languageName} typeface. Nobody on the creative team downloads anything.`
-        + (m.rtl ? ` ${m.languageName} reads right to left, so layouts mirror too: the message card and logo move to the right. That's a one-time template change.` : ""),
-    },
-    {
-      title: `Someone who reads ${m.languageName}`,
-      who: "Your local marketing team",
-      body: `They approve the message in step 3. "What it says" helps everyone else follow along, but a native reader signs off.`,
-    },
-    {
-      title: "Restricted words and claims",
-      who: `Legal, for ${m.name}`,
-      body: `The list of words and claims to avoid in ${m.languageName}. It goes into the brand kit and is checked automatically on every ad, as English and Japanese are today.`,
-    },
-    {
-      title: "Local advertising rules",
-      who: `Legal or your agency in ${m.name}`,
-      body: "Ad rules differ by country: what a product may claim (sun-protection and skincare claims are regulated in many markets), required disclaimers, "
-        + "and in some places approval before an ad runs. They're confirmed before launch; any wording that must appear on the ad becomes part of the template.",
-    },
-    {
-      title: "Local assets, if needed",
-      who: "Brand team",
-      body: "Imagery that fits the market (people, settings, seasons), local product names, and any logo variant used there.",
-    },
+  const sent = view.market_requests?.[m.region];
+  const involved: [string, string][] = [
+    [`A ${m.languageName} typeface`, `${brand}'s fonts don't include ${m.script} yet. Your Adobe or IT team adds one once (${m.font} is free).`
+      + (m.rtl ? ` ${m.languageName} reads right to left, so the layout mirrors too.` : "")],
+    [`A ${m.languageName} reviewer`, `Someone on the local team who approves each translated message in Campaign Studio.`],
+    ["Legal sign-off", `Restricted words, product claims, required disclaimers and any pre-approval rules for ${m.name}.`],
+    ["Local assets, if needed", "Imagery, product names or a logo variant that fit the market."],
   ];
-  const copy = () => {
-    const text = `Launching ${brand} in ${m.name}: what we need\n\n` +
-      steps.map((s, i) => `${i + 1}. ${s.title} (${s.who})\n   ${s.body}`).join("\n\n");
-    navigator.clipboard?.writeText(text).then(() => toast("Checklist copied. Paste it into an email or ticket."),
-      () => toast("Couldn't copy. Select the text instead.", "error"));
+
+  const message = (by: string) =>
+    `Hi,\n\nWe'd like to run ${brand} campaigns in ${m.name} (${m.languageName}). `
+    + `Campaign Studio needs a one-time setup first:\n\n`
+    + involved.map(([t, d]) => `- ${t}: ${d}`).join("\n")
+    + `\n\nCould you route this to the right people? Once it's in place, ${m.name} becomes a ready market for every campaign.`
+    + `\n\nThanks,\n${by}`;
+  const subject = `Request: launch ${brand} in ${m.name}`;
+
+  const record = (via: "email" | "slack" | "copy", by: string, text = "") =>
+    run("market-request", () => api.marketRequest(view.id, m.region, via, by, text));
+
+  const email = async () => {
+    const by = await reviewer();
+    window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(message(by))}`;
+    await record("email", by);
   };
+  const toSlack = async () => {
+    const by = await reviewer();
+    if (await record("slack", by, `*${subject}*\n\n${message(by)}`)) toast("Posted to Slack.");
+  };
+  const copy = async () => {
+    const by = await reviewer();
+    try {
+      await navigator.clipboard.writeText(`${subject}\n\n${message(by)}`);
+      toast("Copied. Paste it into Slack, Teams or your ticketing tool.");
+      await record("copy", by);
+    } catch {
+      toast("Couldn't copy. Use email instead.", "error");
+    }
+  };
+
   return (
     <Modal onClose={onClose}>
       <div className="setup-modal">
-        <h2>Launching in {m.name}</h2>
-        <p className="muted" style={{ marginTop: 0, lineHeight: 1.5 }}>
-          {brand} hasn't run in {m.name} before. Here's what's set up once, and by whom. After that, {m.name} joins the ready list and
-          the workflow is exactly the same.
+        <h2>Launch in {m.name}</h2>
+        <p className="muted" style={{ margin: "0 0 20px", lineHeight: 1.55 }}>
+          {m.name} is new for {brand}, so it needs a one-time setup before its first campaign. Send one request; your Adobe team,
+          local marketing and legal take it from there.
         </p>
-        <ol className="setup-list">
-          {steps.map((s) => (
-            <li key={s.title}>
-              <div className="setup-title">{s.title} <span className="badge">{s.who}</span></div>
-              <div className="setup-body">{s.body}</div>
-            </li>
-          ))}
-        </ol>
-        <div className="row" style={{ justifyContent: "flex-end", marginTop: 8 }}>
+
+        {sent && (
+          <div className="approved-stamp" style={{ marginBottom: 16 }}>
+            <Check size={18} strokeWidth={3} />
+            <span>Requested by {sent.by} <span className="muted">· {timeAgo(sent.at)}, {sent.via === "email" ? "by email" : sent.via === "slack" ? "in Slack" : "copied to share"}</span></span>
+          </div>
+        )}
+
+        <div className="stack" style={{ gap: 10 }}>
+          <Button kind="primary" size="lg" className="btn-block" icon={<Mail size={18} />} onClick={email} busy={busy.has("market-request")}>
+            {sent ? "Email the request again" : "Email the request"}
+          </Button>
+          {slack ? (
+            <Button className="btn-block" icon={<MessageSquare size={17} />} onClick={toSlack} busy={busy.has("market-request")}>Post to Slack</Button>
+          ) : (
+            <Button className="btn-block" icon={<Copy size={16} />} onClick={copy}>Copy for Slack, Teams or a ticket</Button>
+          )}
+        </div>
+
+        <details className="details" style={{ marginTop: 20 }}>
+          <summary><ChevronRight size={14} /> What's involved</summary>
+          <ul className="involved">
+            {involved.map(([t, d]) => <li key={t}><b>{t}.</b> {d}</li>)}
+          </ul>
+        </details>
+
+        <div className="row" style={{ justifyContent: "flex-end", marginTop: 16 }}>
           <Button kind="ghost" onClick={onClose}>Close</Button>
-          <Button kind="primary" onClick={copy}>Copy checklist</Button>
         </div>
       </div>
     </Modal>

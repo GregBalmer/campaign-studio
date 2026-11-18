@@ -112,6 +112,7 @@ export interface View {
   log: LogEntry[];
   sample: boolean;
   has_outputs: boolean;
+  market_requests: Record<string, { by: string; at: string; via: "email" | "slack" | "copy" }>;
 }
 
 export interface ProviderInfo {
@@ -147,7 +148,7 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
 }
 
 export const api = {
-  status: () => call<{ providers: ProviderInfo[]; default_provider: string }>("GET", "status"),
+  status: () => call<{ providers: ProviderInfo[]; default_provider: string; slack: boolean }>("GET", "status"),
   saveKey: (key: string) => call<{ providers: ProviderInfo[] }>("POST", "settings/key", { key }),
   campaigns: () => call<CampaignSummary[]>("GET", "campaigns"),
   createCampaign: (name: string) => call<View>("POST", "campaigns", { name }),
@@ -181,6 +182,8 @@ export const api = {
       `campaigns/${id}/preview?product=${product}&format=${format}&lang=${lang}&w=${w}` +
         (text !== undefined ? `&text=${encodeURIComponent(text)}` : ""),
     ),
+  marketRequest: (id: string, region: string, via: "email" | "slack" | "copy", by: string, text = "") =>
+    call<View>("POST", `campaigns/${id}/market-request`, { region, via, by, text }),
   fanOut: (id: string, by: string) => call<View>("POST", `campaigns/${id}/fanout`, { by }),
   decide: (id: string, key: string, decision: "approved" | "rejected" | null, by: string, note = "") =>
     call<View>("POST", `campaigns/${id}/decide`, { key, decision, by, note }),

@@ -1,5 +1,9 @@
 # Changelog
 
+## After v2
+
+- **New-market requests in one click.** The five-item checklist becomes one action: email the request, or post it to Slack when IT has connected a channel, or copy it for Teams or a ticket. The details fold away under "What's involved", and the market shows as Requested afterwards.
+
 ## v2: polish
 
 - **Adobe branding, kept out of the work.** Adobe red is the single accent in the app chrome: the app mark, the current step, and a thin line across the top. The header says "Built for Adobe Firefly Services", and Settings marks Firefly as the production option. No Adobe logos are used. The ads themselves are never touched by app colour.

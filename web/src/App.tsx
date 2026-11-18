@@ -32,6 +32,7 @@ export default function App() {
   const [view, setView] = useState<View | null>(null);
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [providers, setProviders] = useState<ProviderInfo[]>([]);
+  const [slack, setSlack] = useState(false);
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [toastMsg, setToast] = useState<{ msg: string; kind: "info" | "error" } | null>(null);
@@ -65,6 +66,7 @@ export default function App() {
         const [list, status] = await Promise.all([api.campaigns(), api.status()]);
         setCampaigns(list);
         setProviders(status.providers);
+        setSlack(status.slack);
         const last = store("studio.campaign");
         const id = list.find((c) => c.id === last)?.id ?? list.find((c) => c.sample)?.id ?? list[0]?.id;
         if (id) await open(id);
@@ -121,7 +123,7 @@ export default function App() {
   const provider = providers.find((p) => p.id === view.provider);
 
   const ctx: Ctx = {
-    view, setView, run, busy, reviewer, reviewerName, toast,
+    view, setView, run, busy, reviewer, reviewerName, toast, slack,
     goTo: (s) => { setStep(s); window.scrollTo({ top: 0, behavior: "smooth" }); },
   };
 
@@ -254,6 +256,7 @@ function describe(event: string): string {
     "frame.approved": "approved",
     "frame.rejected": "rejected",
     "frame.cleared": "cleared the decision on",
+    "market.requested": "requested a new market:",
   } as Record<string, string>)[event] ?? event;
 }
 

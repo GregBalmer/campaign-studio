@@ -111,7 +111,9 @@ class Handler(BaseHTTPRequestHandler):
         by = (b.get("by") or "").strip() or None
 
         if parts == ["status"]:
-            return self._json({"providers": providers.available(), "default_provider": providers.default_name()})
+            from .notify import slack_webhook
+            return self._json({"providers": providers.available(), "default_provider": providers.default_name(),
+                               "slack": bool(slack_webhook())})
 
         if parts == ["settings", "key"] and method == "POST":
             key = (b.get("key") or "").strip()
@@ -191,6 +193,17 @@ class Handler(BaseHTTPRequestHandler):
             png, checks = c.preview_png(q["product"], q["format"], q["lang"], text, int(q.get("w", 720)))
             return self._json({"image": "data:image/jpeg;base64," + base64.b64encode(png).decode(),
                                "checks": checks})
+
+        if head == "market-request" and method == "POST":
+            region = str(b.get("region", ""))[:8]
+            via = b.get("via", "")
+            if via == "slack":
+                from .notify import NotifyError, post_to_slack
+                try:
+                    post_to_slack(str(b.get("text", ""))[:3500])
+                except NotifyError as e:
+                    raise StudioError(str(e)) from None
+            return with_campaign(cid, lambda c: (c.record_market_request(region, via, by), view(c))[1])
 
         if head == "fanout" and method == "POST":
             return with_campaign(cid, lambda c: (c.fan_out(by), view(c))[1])

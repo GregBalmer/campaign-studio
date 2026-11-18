@@ -500,7 +500,18 @@ class Campaign:
             "log": self.state["log"][-30:],
             "sample": (config.SAMPLES / self.id).exists(),
             "has_outputs": (self.out_dir() / "report.json").exists(),
+            "market_requests": self.state.get("market_requests", {}),
         }
+
+    def record_market_request(self, region: str, via: str, by: str | None) -> dict:
+        """Remember that someone asked for a new market, so nobody asks twice."""
+        if via not in ("email", "slack", "copy"):
+            raise StudioError("Unknown way to send the request.")
+        req = {"by": by or "someone", "at": now(), "via": via}
+        self.state.setdefault("market_requests", {})[region] = req
+        self.log(by, "market.requested", f"{region} by {via}")
+        self.save()
+        return req
 
     def set_provider(self, name: str) -> None:
         if name not in ("mock", "openai"):

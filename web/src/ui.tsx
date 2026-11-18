@@ -15,6 +15,8 @@ export interface Ctx {
   reviewerName: string;
   toast: (msg: string, kind?: "info" | "error") => void;
   goTo: (step: number) => void;
+  /** True when IT has connected a Slack channel for requests. */
+  slack: boolean;
 }
 
 export const AppCtx = createContext<Ctx | null>(null);

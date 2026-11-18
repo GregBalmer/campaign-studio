@@ -111,16 +111,13 @@ outputs/long-light/
 
 ## Launching in a new market
 
-**Add market** lists two kinds of market. **Ready to use** markets work straight away. **New to the brand** markets (South Korea, China, Saudi Arabia in the sample) open a checklist instead of half-working: what's set up once, and by whom.
+**Add market** lists two kinds of market. **Ready to use** markets work straight away. Markets **new to the brand** (South Korea, China and Saudi Arabia in the sample) need a one-time setup, so instead of half-working they ask for it, in one click:
 
-- **A typeface for the script.** For example, Noto Sans KR for Korean. Your Adobe or IT team adds it once; the creative team downloads nothing. The app won't offer a market whose script it can't set, rather than print empty boxes.
-- **Right-to-left markets** such as Saudi Arabia also need a one-time mirrored layout.
-- **A native reader** to approve the message.
-- **Legal's restricted words and claims** for that market. These are checked automatically from then on.
-- **Local advertising rules:** claims, disclaimers and any pre-approval, confirmed by local legal or the agency.
-- **Local assets** where they matter.
+- **Email the request** opens the user's own mail app with the subject and a plain-English request already written. No setup needed.
+- **Post to Slack** appears when IT has connected a channel (set `STUDIO_SLACK_WEBHOOK` to a Slack incoming-webhook URL). Otherwise it's **Copy for Slack, Teams or a ticket**.
+- The market then shows as **Requested**, with who asked and when, so nobody asks twice.
 
-**Copy checklist** puts the list on the clipboard, ready for an email or a ticket.
+The request covers what's involved: a typeface for the script (with a mirrored layout for right-to-left languages), a native reviewer, legal sign-off on claims and local rules, and any local assets. The creative team downloads nothing. In production, the same hook would open a Jira or ServiceNow ticket instead.
 
 ## The checks
 
@@ -221,6 +218,6 @@ npm run dev
 
 Open `localhost:5173`, which forwards API calls to the running app. Run `npm run build` to update `web/dist`, the version everyone else gets.
 
-**Settings** (optional, in `.env`): `OPENAI_API_KEY`, `STUDIO_IMAGE_MODEL` (default `gpt-image-2.6-flare`), `STUDIO_TEXT_MODEL` (default `gpt-6-luna`) and `STUDIO_PORT` (default `8765`; the next free port is used if it's taken).
+**Settings** (optional, in `.env`): `OPENAI_API_KEY`, `STUDIO_SLACK_WEBHOOK` (where new-market requests post), `STUDIO_IMAGE_MODEL` (default `gpt-image-2.6-flare`), `STUDIO_TEXT_MODEL` (default `gpt-6-luna`) and `STUDIO_PORT` (default `8765`; the next free port is used if it's taken).
 
 Licence: MIT (code). Fonts: SIL Open Font Licence 1.1 (see `studio/fonts/`).
