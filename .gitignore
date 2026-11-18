@@ -10,3 +10,5 @@ HANDOFF*.md
 .DS_Store
 .snapshots/
 .smoke-profile/
+PRESENTATION*.md
+VOICE-SAMPLES.md
