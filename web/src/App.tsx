@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, History, LogOut, Plus, RotateCcw, Settings2, UserRound, X } from "lucide-react";
+import { Check, ChevronDown, History, LogOut, Plus, RotateCcw, X } from "lucide-react";
 import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderInfo, type View } from "./api";
 import { AppCtx, Button, Drawer, clock, useDismiss, type Ctx } from "./ui";
 import SignIn from "./SignIn";
@@ -194,59 +194,61 @@ export default function App() {
   return (
     <AppCtx.Provider value={ctx}>
       <header className="topbar">
-        <div className="wordmark">
+        <div className="topbar-left">
           <span className="wordmark-mark"><AppMark /></span>
-          Campaign Studio
-          <span className="tagline">Built for Adobe Firefly Services</span>
-        </div>
-        <span className="divider-v" />
-        <div style={{ position: "relative" }} ref={switcher}>
-          <button className="campaign-switch" aria-expanded={panel === "campaigns"} onClick={() => setPanel(panel === "campaigns" ? null : "campaigns")}>
-            {view.brief.campaign || "Untitled campaign"}
-            {view.sample && <span className="badge">Sample</span>}
-            <ChevronDown size={16} className="muted" />
-          </button>
-          {panel === "campaigns" && (
-            <CampaignMenu
-              campaigns={campaigns}
-              current={view.id}
-              sample={view.sample}
-              onPick={async (id) => { setPanel(null); await run("open", async () => { await open(id); }); }}
-              onNew={async (name) => {
-                setPanel(null);
-                await run("new", async () => { const v = await api.createCampaign(name); await refreshCampaigns(); setStep(0); return v; });
-              }}
-              onReset={async () => {
-                setPanel(null);
-                await run("reset", async () => { const v = await api.reset(view.id); setStep(0); toast("Sample reset to the start."); return v; });
-              }}
-              onClose={() => setPanel(null)}
-            />
-          )}
+          <span className="wordmark">Campaign Studio</span>
+          <span className="divider-v" />
+          <div className="campaign-slot" ref={switcher}>
+            <button className="campaign-switch" aria-expanded={panel === "campaigns"} onClick={() => setPanel(panel === "campaigns" ? null : "campaigns")}>
+              <span className="campaign-label">Campaign</span>
+              <span className="campaign-name">{view.brief.campaign || "Untitled campaign"}</span>
+              {view.sample && <span className="badge">Sample</span>}
+              <ChevronDown size={15} className="muted campaign-chevron" />
+            </button>
+            {panel === "campaigns" && (
+              <CampaignMenu
+                campaigns={campaigns}
+                current={view.id}
+                sample={view.sample}
+                onPick={async (id) => { setPanel(null); await run("open", async () => { await open(id); }); }}
+                onNew={async (name) => {
+                  setPanel(null);
+                  await run("new", async () => { const v = await api.createCampaign(name); await refreshCampaigns(); setStep(0); return v; });
+                }}
+                onReset={async () => {
+                  setPanel(null);
+                  await run("reset", async () => { const v = await api.reset(view.id); setStep(0); toast("Sample reset to the start."); return v; });
+                }}
+                onClose={() => setPanel(null)}
+              />
+            )}
+          </div>
         </div>
         <div className="spacer" />
-        <button className="chip-button" onClick={() => setPanel("settings")} title="Image generator">
-          <span className={`dot ${view.provider === "openai" ? "ok" : "demo"}`} />
-          {provider?.label ?? view.provider}
-          <Settings2 size={15} />
-        </button>
-        <button className="chip-button" onClick={() => setPanel("history")} title="Approval history">
-          <History size={15} /> History
-        </button>
-        <div style={{ position: "relative" }} ref={account}>
-          <button className="chip-button" aria-expanded={panel === "account"} onClick={() => setPanel(panel === "account" ? null : "account")}>
-            <UserRound size={15} /> {reviewerName}
+        <div className="topbar-right">
+          <button className="bar-text" onClick={() => setPanel("settings")} title="Image generator. Click to change.">
+            <span className={`dot ${view.provider === "openai" ? "ok" : "demo"}`} />
+            <span className="muted">Images</span> {provider?.label ?? view.provider}
           </button>
-          {panel === "account" && me && (
-            <div className="menu user-menu">
-              <div className="user-menu-head">
-                <b>{me.name}</b>
-                <span className="muted small">{me.email}{me.role && ` · ${me.role}`}</span>
+          <button className="bar-icon" onClick={() => setPanel("history")} title="History" aria-label="History">
+            <History size={18} />
+          </button>
+          <div className="campaign-slot" ref={account}>
+            <button className="avatar" aria-expanded={panel === "account"} onClick={() => setPanel(panel === "account" ? null : "account")}
+              title={reviewerName} aria-label={`Account: ${reviewerName}`}>
+              {initials(reviewerName)}
+            </button>
+            {panel === "account" && me && (
+              <div className="menu user-menu">
+                <div className="user-menu-head">
+                  <b>{me.name}</b>
+                  <span className="muted small">{me.email}{me.role && ` · ${me.role}`}</span>
+                </div>
+                <div style={{ borderTop: "1px solid var(--line)", margin: "4px 0" }} />
+                <button className="menu-item" onClick={signOut}><span className="row"><LogOut size={15} /> Sign out</span></button>
               </div>
-              <div style={{ borderTop: "1px solid var(--line)", margin: "4px 0" }} />
-              <button className="menu-item" onClick={signOut}><span className="row"><LogOut size={15} /> Sign out</span></button>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </header>
 
@@ -300,6 +302,9 @@ export default function App() {
     </AppCtx.Provider>
   );
 }
+
+const initials = (name: string) =>
+  name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
 
 /** One frame becoming many sizes. Deliberately unlike any client brand mark. */
 export function AppMark({ size = 16 }: { size?: number }) {

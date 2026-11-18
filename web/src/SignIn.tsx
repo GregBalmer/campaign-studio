@@ -30,9 +30,9 @@ export default function SignIn({ demo, onSignedIn }: { demo: DemoAccount[]; onSi
   return (
     <div className="signin">
       <div className="signin-card">
-        <div className="wordmark" style={{ marginBottom: 28 }}>
+        <div className="signin-brand">
           <span className="wordmark-mark"><AppMark /></span>
-          Campaign Studio
+          <span className="wordmark">Campaign Studio</span>
           <span className="tagline">Built for Adobe Firefly Services</span>
         </div>
         <h1>Sign in</h1>

@@ -48,27 +48,47 @@ img { display: block; max-width: 100%; }
 .topbar {
   position: sticky; top: 0; z-index: 30;
   display: flex; align-items: center; gap: 16px;
-  height: 64px; padding: 0 28px;
-  background: rgba(245, 243, 239, 0.86);
-  box-shadow: inset 0 3px 0 var(--adobe);
-  backdrop-filter: saturate(1.4) blur(14px);
-  border-bottom: 1px solid var(--line);
+  height: 60px; padding: 0 28px;
+  background: var(--bar-bg); color: var(--bar-ink);
+  box-shadow: inset 0 3px 0 var(--adobe), var(--bar-shadow);
+  border-bottom: 1px solid var(--bar-line);
 }
-.wordmark { display: flex; align-items: center; gap: 10px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
-.wordmark-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--adobe); display: grid; place-items: center; }
-.tagline { font-size: 12.5px; font-weight: 500; color: var(--ink-3); padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--line-strong); letter-spacing: 0; }
-@media (max-width: 1100px) { .tagline { display: none; } }
+/* Text in the left cluster shares one baseline; the mark and divider sit centred. */
+.topbar-left { display: flex; align-items: baseline; gap: 12px; min-width: 0; }
+.topbar-left > .wordmark-mark, .topbar-left > .divider-v { align-self: center; }
+.wordmark { font-size: 15px; font-weight: 650; letter-spacing: -0.01em; white-space: nowrap; }
+.wordmark-mark { width: 26px; height: 26px; border-radius: 7px; background: var(--adobe); display: grid; place-items: center; flex: none; margin-right: -2px; }
 .topbar .spacer { flex: 1; }
-.divider-v { width: 1px; height: 22px; background: var(--line-strong); }
+.divider-v { width: 1px; height: 20px; background: var(--bar-line-strong); margin: 0 2px; }
 
+.campaign-slot { position: relative; }
 .campaign-switch {
-  display: flex; align-items: center; gap: 8px;
-  padding: 6px 10px; border-radius: 10px; border: 0; background: transparent; cursor: pointer;
-  font-weight: 550; color: var(--ink);
+  display: inline-flex; align-items: baseline; gap: 8px;
+  padding: 6px 8px; margin: -6px -8px; border-radius: 9px; border: 0; background: transparent; cursor: pointer; color: inherit;
 }
-.campaign-switch:hover { background: var(--hover); }
-.campaign-switch .muted { font-weight: 450; }
+.campaign-switch:hover { background: var(--bar-hover); }
+.campaign-label { font-size: 11.5px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--bar-ink-3); }
+.campaign-name { font-size: 15px; font-weight: 600; letter-spacing: -0.01em; }
+.campaign-switch .badge { align-self: center; }
+.campaign-chevron { align-self: center; }
 
+.topbar-right { display: flex; align-items: center; gap: 6px; }
+.bar-text {
+  display: inline-flex; align-items: center; gap: 7px; height: 34px; padding: 0 10px; border-radius: 9px;
+  border: 0; background: transparent; cursor: pointer; font-size: 13px; font-weight: 550; color: inherit;
+}
+.bar-text .muted { color: var(--bar-ink-3); font-weight: 500; }
+.bar-icon {
+  display: grid; place-items: center; width: 34px; height: 34px; border-radius: 9px;
+  border: 0; background: transparent; cursor: pointer; color: var(--bar-ink-2);
+}
+.bar-text:hover, .bar-icon:hover { background: var(--bar-hover); color: var(--bar-ink); }
+.avatar {
+  width: 32px; height: 32px; border-radius: 50%; margin-left: 4px; border: 0; cursor: pointer;
+  display: grid; place-items: center; font-size: 12px; font-weight: 650; letter-spacing: 0.02em;
+  background: var(--bar-avatar); color: var(--bar-avatar-ink);
+}
+.avatar:hover { box-shadow: 0 0 0 3px var(--bar-hover); }
 .chip-button {
   display: inline-flex; align-items: center; gap: 8px;
   height: 34px; padding: 0 12px; border-radius: 999px;
@@ -79,6 +99,16 @@ img { display: block; max-width: 100%; }
 .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
 .dot.ok { background: var(--ok); }
 .dot.demo { background: #c9a227; }
+.topbar .menu { color: var(--ink); }
+
+/* A dark top bar: lifts the app chrome off the page so the steps and the work stand out. */
+:root {
+  --bar-bg: #1d1d21; --bar-ink: #f4f3f0; --bar-ink-2: #c9c8ce; --bar-ink-3: #8f8e96;
+  --bar-line: #1d1d21; --bar-line-strong: #3a3a40; --bar-hover: rgba(255, 255, 255, 0.08);
+  --bar-shadow: 0 8px 24px rgba(23, 23, 27, 0.12);
+  --bar-avatar: #f4f3f0; --bar-avatar-ink: #17171b;
+}
+.topbar .badge { background: rgba(255, 255, 255, 0.12); color: #e9e8e4; }
 
 /* ---------------------------------------------------------------- stepper */
 .stepper {
@@ -515,3 +545,5 @@ a.btn { text-decoration: none; }
 .user-menu { right: 0; left: auto; min-width: 240px; }
 .user-menu-head { padding: 10px 10px 8px; }
 .user-menu-head b { display: block; }
+.signin-brand { display: flex; align-items: center; gap: 10px; margin-bottom: 28px; }
+.tagline { font-size: 12.5px; font-weight: 500; color: var(--ink-3); padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--line-strong); white-space: nowrap; }
