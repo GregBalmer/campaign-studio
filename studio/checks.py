@@ -80,7 +80,7 @@ def run(layout: dict, text: str, lang: str, brief: dict) -> list[dict]:
     on = layout["text_on_product"]
     if on > 0.15:
         add("clear", "Message stays off the product", FAIL,
-            "The message covers the product. Check the dot is on the product in step 2.",
+            "The message covers the product. Check the product box in step 2.",
             layout["card_box"])
     elif on > 0:
         add("clear", "Message stays off the product", WARN,

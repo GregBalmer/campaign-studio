@@ -227,25 +227,47 @@ def render(master: Image.Image, fmt: str, focal: tuple[float, float], text: str,
     top_safe = max(margin, int(H * rules["safe"][0]))
     bottom_safe = max(margin, int(H * rules["safe"][1]))
 
+    # Room beside the product on each side, keeping a small breathing gap.
+    breathe = int(short * 0.02)
+    zl, zt, zr, zb = zone
+
+    def room(side: str) -> tuple[int, int]:
+        """Widest and tallest a card can be on this side without touching the product."""
+        w, h = W - 2 * margin, H - top_safe - bottom_safe
+        if side == "left":
+            w = int(zl - breathe - margin)
+        elif side == "right":
+            w = int(W - margin - zr - breathe)
+        elif side == "top":
+            h = int(zt - breathe - top_safe)
+        elif side == "bottom":
+            h = int(H - bottom_safe - zb - breathe)
+        return w, h
+
     def plan(side: str) -> dict:
         col = rules["col_side"] if side in ("left", "right") else rules["col_wide"]
+        room_w, room_h = room(side)
         col_w = int(W * col) - 2 * pad
+        if room_w - 2 * pad >= short * 0.25:  # enough room beside it: stay inside it
+            col_w = min(col_w, room_w - 2 * pad)
+        if room_h < short * 0.2:  # no real room above or below: don't try to fit
+            room_h = H
         size = base_size
         while True:
             lines, clean = wrap(text, font(lang, size), col_w, cjk)
+            line_h = int(size * (1.34 if cjk else 1.1))
+            gap = int(size * 0.45)
+            logo_gap = int(size * 0.7)
+            content_h = bar_h + gap + line_h * len(lines) - int(line_h - size) + \
+                (logo_gap + logo_src.height if logo_src else 0)
             # Two lines read best; go a little smaller to get there before
-            # accepting three.
+            # accepting three. Shrink further only if the card won't fit the room.
             target = 2 if size > base_size * 0.86 else 3
-            if (len(lines) <= target and clean) or size <= min_size:
+            if (len(lines) <= target and clean and content_h + 2 * pad <= room_h) or size <= min_size:
                 break
             size = max(min_size, int(size * 0.92))
-        line_h = int(size * (1.34 if cjk else 1.1))
-        gap = int(size * 0.45)
-        logo_gap = int(size * 0.7)
         text_w = max(_measure(font(lang, size))(ln) for ln in lines)
         content_w = int(max(text_w, bar_w, logo_src.width if logo_src else 0))
-        content_h = bar_h + gap + line_h * len(lines) - int(line_h - size) + \
-            (logo_gap + logo_src.height if logo_src else 0)
         card_w, card_h = content_w + 2 * pad, content_h + 2 * pad
         if side == "top":
             cx, cy = margin, top_safe

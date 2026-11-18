@@ -141,7 +141,7 @@ class MockProvider(Provider):
 
         img = img.filter(ImageFilter.GaussianBlur(0.6))
         # Remember where the product is, so the default focal point is right.
-        top = y0 - int(s * 0.1)  # include the cap
+        top = y0 - int(s * (0.1 if kind == "bottle" else 0.018))  # include the nozzle or crimp
         img.info["focal"] = (cx / s, (top + base_y) / 2 / s)
         img.info["zone"] = (w * 0.62 / s, (base_y - top) / 2 / s + 0.01)
         return img
