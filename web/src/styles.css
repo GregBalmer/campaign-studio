@@ -655,10 +655,15 @@ body::after { content: ""; position: fixed; z-index: 90; left: 0; right: 0; bott
 .tagline { font-size: 12.5px; font-weight: 500; color: var(--ink-3); padding-left: 10px; margin-left: 2px; border-left: 1px solid var(--line-strong); white-space: nowrap; }
 
 /* ---------------------------------------------------------------- settings */
-.option-group { margin-top: 24px; }
-.option-group-note { margin: 0 0 4px 40px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
-.option-group-icon { width: 30px; height: 30px; border-radius: 8px; display: grid; place-items: center; flex: none; background: var(--action-bg, #e8eefc); color: var(--action); }
-.option-group h3 { display: flex; align-items: center; gap: 10px; margin: 0 0 2px; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink); }
+/* Services drawer: each kind of service (Images, Translation, Storage) in its own panel.
+   The heading and its note start where the text inside the tiles starts:
+   tile border 1 + padding 14 + radio 18 + gap 14 = 47px. The icon (22px) is
+   centred over the radios and tick boxes: 13 + 22 / 2 = 15 + 18 / 2 = 24px. */
+.option-group { margin-top: 16px; padding: 18px 16px 16px; border-radius: 16px; background: var(--surface-2); border: 1px solid var(--line); }
+.option-group .option { background: var(--surface); }
+.option-group-note { margin: 2px 0 4px 47px; font-size: 13px; line-height: 1.5; color: var(--ink-3); }
+.option-group-icon { width: 22px; height: 22px; margin-left: 13px; display: grid; place-items: center; flex: none; color: var(--action); }
+.option-group h3 { display: flex; align-items: center; gap: 12px; margin: 0; font-size: 16px; font-weight: 650; letter-spacing: -0.01em; color: var(--ink); }
 /* A service that still needs credentials: the row opens its own short form. */
 .option.connectable { display: block; padding: 0; cursor: default; }
 .option.connectable.open { border-color: var(--ink-3); }
@@ -703,3 +708,11 @@ body::after { content: ""; position: fixed; z-index: 90; left: 0; right: 0; bott
   .tile { max-width: 100%; }
   .tile-img { max-width: 100%; height: auto !important; }
 }
+/* Storage rows are on or off together, not one-of: a tick box, not a radio. */
+.option.static { cursor: default; align-items: flex-start; }
+.tick { width: 18px; height: 18px; border-radius: 5px; flex: none; margin-top: 2px; display: grid; place-items: center; background: var(--action); color: #fff; }
+.tick.off { background: transparent; border: 1.5px solid var(--line-strong); }
+button.connect-link { border: 0; background: none; padding: 0; cursor: pointer; }
+button.connect-link:hover { text-decoration: underline; }
+.summary-panel .btn-block + .btn-block { margin-top: 10px; }
+.sent-line { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 0; font-size: 13.5px; font-weight: 550; color: var(--ok); }

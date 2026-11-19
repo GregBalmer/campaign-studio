@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { ArrowLeft, ArrowRight, Check, CheckCheck, Download, FolderOpen, Loader2, X } from "lucide-react";
+import { ArrowLeft, ArrowRight, Check, CheckCheck, CloudUpload, Download, FolderOpen, Loader2, X } from "lucide-react";
 import { api, ApiError, frameUrl, LANGUAGE_NAMES, type Frame } from "../api";
 import { Button, CheckIconDot, ErrorNote, Markers, NextPanel, StatusBadge, timeAgo, useApp, useEscape } from "../ui";
 
@@ -7,7 +7,7 @@ type Filter = "all" | "open" | "approved" | "rejected";
 const FORMAT_ORDER = ["1x1", "9x16", "16x9"];
 
 export default function ReviewStep() {
-  const { view, run, busy, reviewer, toast } = useApp();
+  const { view, run, busy, reviewer, toast, storage } = useApp();
   const [filter, setFilter] = useState<Filter>("all");
   const [openKey, setOpenKey] = useState<string | null>(null);
   const building = busy.has("fanout");
@@ -58,6 +58,14 @@ export default function ReviewStep() {
       </div>
     );
   }
+
+  // Sent counts as current only if nothing was approved after the last send.
+  const lastApproval = entries.reduce((t, [, f]) => (f.decision?.value === "approved" && f.decision.at > t ? f.decision.at : t), "");
+  const sentUpToDate = !!view.azure && view.azure.at >= lastApproval && view.azure.count === counts.approved;
+  const sendToAzure = async () => {
+    const ok = await run("azure", () => api.sendToAzure(view.id));
+    if (ok) toast(`Sent ${counts.approved} approved ${counts.approved === 1 ? "ad" : "ads"} to Azure.`);
+  };
 
   const showFolder = async () => {
     try { await api.revealOutputs(view.id); }
@@ -154,6 +162,16 @@ export default function ReviewStep() {
                 <Download size={18} /> Download approved ads
               </a>
             )}
+            {passingOpen.length === 0 && storage.connected && counts.approved > 0 && (
+              sentUpToDate ? (
+                <p className="sent-line"><Check size={15} strokeWidth={3} /> Sent to Azure {timeAgo(view.azure!.at)}</p>
+              ) : (
+                <Button className="btn-block" icon={<CloudUpload size={17} />} busy={busy.has("azure")} onClick={sendToAzure}>
+                  Send {counts.approved} to Azure
+                </Button>
+              )
+            )}
+            <ErrorNote k="azure" />
             {view.has_outputs && (
               <a className="summary-link" href={`/api/campaigns/${view.id}/download${passingOpen.length > 0 && counts.approved ? "?only=approved" : ""}`}>
                 {passingOpen.length > 0 && counts.approved ? `Or download the ${counts.approved} approved so far` : `Download all ${counts.total} ads`}

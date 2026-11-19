@@ -120,6 +120,8 @@ export interface View {
   sample: boolean;
   has_outputs: boolean;
   market_requests: Record<string, { by: string; at: string; via: "email" | "slack" | "copy" }>;
+  /** The last time the approved ads were sent to Azure, if ever. */
+  azure: { at: string; by: string; count: number; account?: string; container?: string } | null;
 }
 
 export interface ProviderInfo {
@@ -167,11 +169,16 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   return data as T;
 }
 
+/** Cloud storage as the Services panel shows it. The link itself never reaches the browser. */
+export type StorageInfo = { connected: boolean; test: boolean; account?: string; container?: string; expires?: string | null; problem?: string };
+
 export const api = {
   me: () => call<{ user: Person | null; demo: DemoAccount[] }>("GET", "auth/me"),
   signIn: (email: string, password: string) => call<{ user: Person }>("POST", "auth/login", { email, password }),
   signOut: () => call<{ user: null }>("POST", "auth/logout"),
-  status: () => call<{ providers: ProviderLists; default_providers: Record<ProviderKind, string>; slack: boolean }>("GET", "status"),
+  status: () => call<{ providers: ProviderLists; default_providers: Record<ProviderKind, string>; slack: boolean; storage: StorageInfo }>("GET", "status"),
+  connectAzure: (link: string) => call<{ storage: StorageInfo }>("POST", "settings/azure", { link }),
+  disconnectAzure: () => call<{ storage: StorageInfo }>("DELETE", "settings/azure"),
   saveKey: (key: string) => call<{ providers: ProviderLists }>("POST", "settings/key", { key }),
   saveFirefly: (client_id: string, client_secret: string) =>
     call<{ providers: ProviderLists }>("POST", "settings/firefly", { client_id, client_secret }),
@@ -181,6 +188,7 @@ export const api = {
   get: (id: string) => call<View>("GET", `campaigns/${id}`),
   reset: (id: string, by: string) => call<View>("POST", `campaigns/${id}/reset`, { by }),
   revealOutputs: (id: string) => call<{ ok: boolean }>("POST", `campaigns/${id}/reveal`, {}),
+  sendToAzure: (id: string) => call<View>("POST", `campaigns/${id}/send-azure`, {}),
   deleteCampaign: (id: string) => call<CampaignSummary[]>("DELETE", `campaigns/${id}`),
   patchBrief: (id: string, patch: Partial<Brief>) => call<View>("PATCH", `campaigns/${id}/brief`, patch),
   setProvider: (id: string, kind: ProviderKind, provider: string) =>

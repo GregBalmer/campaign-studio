@@ -79,6 +79,14 @@ def stop(proc: subprocess.Popen) -> None:
         proc.kill()
 
 
+def azure_checks(venv_py: Path, clean: dict) -> None:
+    """The Azure storage connection, with no Azure account and no network."""
+    r = subprocess.run([str(venv_py), "tools/test_azure.py"], cwd=ROOT, env=clean,
+                       capture_output=True, text=True, encoding="utf-8", errors="replace")
+    assert r.returncode == 0, f"Azure storage tests failed:\n{r.stderr[-1500:]}"
+    log("Azure storage tests OK: " + (r.stderr.strip().splitlines() or ["?"])[-3])
+
+
 def firefly_checks(venv_py: Path, clean: dict) -> None:
     """The Firefly adapter, with no Adobe account and no network."""
     r = subprocess.run([str(venv_py), "tools/test_firefly.py"], cwd=ROOT, env=clean,
@@ -251,6 +259,7 @@ def main() -> int:
     venv_py = ROOT / ".venv" / ("Scripts/python.exe" if WINDOWS else "bin/python")
     clean = dict(env, PYTHONIOENCODING="utf-8")
     firefly_checks(venv_py, clean)
+    azure_checks(venv_py, clean)
     r = subprocess.run([str(venv_py), "cli.py", "--provider", "mock"], cwd=ROOT,
                        env=clean,
                        capture_output=True, text=True, encoding="utf-8", errors="replace")

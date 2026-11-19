@@ -595,6 +595,7 @@ class Campaign:
             "sample": (config.SAMPLES / self.id).exists(),
             "has_outputs": (self.out_dir() / "report.json").exists(),
             "market_requests": self.state.get("market_requests", {}),
+            "azure": self.state.get("azure"),
         }
 
     def record_market_request(self, region: str, via: str, by: str | None) -> dict:
@@ -617,9 +618,37 @@ class Campaign:
         if entry is None:
             raise StudioError(f"Unknown {what}.")
         if not entry["ready"]:
-            raise StudioError(f"{entry['label']} isn't connected yet. Add its credentials under Models first.")
+            raise StudioError(f"{entry['label']} isn't connected yet. Add its credentials under Services first.")
         self.state[f"{kind}_provider"] = name
         self.save()
+
+
+def send_to_azure(cid: str, by: str | None = None) -> int:
+    """Upload the approved ads and report.json to the connected Azure container,
+    in the same folders as on disk. The uploads run outside the lock, like image
+    generation, so the app stays responsive. Returns how many ads went."""
+    from . import storage
+    with _lock:
+        c = Campaign(cid)
+        out = c.out_dir()
+        ads = [(f["path"], out / f["path"]) for f in c.state["frames"].values()
+               if (f.get("decision") or {}).get("value") == "approved" and (out / f["path"]).exists()]
+    if not ads:
+        raise StudioError("Approve at least one ad first.")
+    try:
+        storage.send(cid, ads)
+        where = storage.describe()
+        with _lock:
+            c = Campaign(cid)
+            c.state["azure"] = {"at": now(), "by": by, "count": len(ads),
+                                "account": where.get("account"), "container": where.get("container")}
+            c.log(by, "export.azure", f"{len(ads)} approved ad{'s' if len(ads) != 1 else ''}")
+            c.save()
+            c.write_report()
+        storage.send(cid, [("report.json", out / "report.json")])
+    except storage.StorageError as e:
+        raise StudioError(str(e)) from None
+    return len(ads)
 
 
 def with_campaign(cid: str, fn):
@@ -629,7 +658,7 @@ def with_campaign(cid: str, fn):
 
 
 __all__ = ["Campaign", "StudioError", "ProviderError", "list_campaigns", "create_campaign",
-           "reset_sample", "start_over", "delete_campaign", "ensure_samples", "with_campaign", "generate_master", "translate_all"]
+           "reset_sample", "start_over", "delete_campaign", "ensure_samples", "with_campaign", "generate_master", "translate_all", "send_to_azure"]
 
 
 # ------------------------------------------------------------ slow steps

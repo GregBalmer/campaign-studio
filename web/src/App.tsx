@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, Copy, FilePlus, LogOut, Plus, RotateCcw, Trash2, X } from "lucide-react";
-import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderLists, type View } from "./api";
+import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderLists, type StorageInfo, type View } from "./api";
 import { AppCtx, Button, Drawer, Modal, clock, useDismiss, type Ctx } from "./ui";
 import SignIn from "./SignIn";
 import BriefStep from "./steps/BriefStep";
@@ -19,7 +19,7 @@ const STEPS = [
 const stageStep = { setup: 0, master: 1, words: 2, review: 3 } as const;
 // Each step has its own address, so a refresh or a shared link keeps your place.
 const HASHES = ["brief", "key-visual", "message", "review"];
-const INLINE_ERRORS = /^(master-|upload-|translate$|fanout$)/;
+const INLINE_ERRORS = /^(master-|upload-|translate$|fanout$|azure$)/;
 
 function store(key: string, value?: string): string | null {
   try {
@@ -35,6 +35,7 @@ export default function App() {
   const [campaigns, setCampaigns] = useState<CampaignSummary[]>([]);
   const [providers, setProviders] = useState<ProviderLists>({ image: [], text: [] });
   const [slack, setSlack] = useState(false);
+  const [storage, setStorage] = useState<StorageInfo>({ connected: false, test: false });
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState<Set<string>>(new Set());
   const [toastMsg, setToast] = useState<{ msg: string; kind: "info" | "error" } | null>(null);
@@ -82,6 +83,7 @@ export default function App() {
         setCampaigns(list);
         setProviders(status.providers);
         setSlack(status.slack);
+        setStorage(status.storage);
         const last = store("studio.campaign");
         const id = list.find((c) => c.id === last)?.id ?? list.find((c) => c.sample)?.id ?? list[0]?.id;
         if (id) await open(id);
@@ -200,7 +202,7 @@ export default function App() {
   ];
 
   const ctx: Ctx = {
-    view, setView, run, busy, reviewer, reviewerName, toast, slack, errors, retry, dismissError,
+    view, setView, run, busy, reviewer, reviewerName, toast, slack, storage, setStorage, errors, retry, dismissError,
     goTo: (s) => {
       if (s !== step) history.pushState(null, "", `#${HASHES[s]}`);
       setStep(s);
@@ -235,7 +237,7 @@ export default function App() {
               </div>
             )}
           </div>
-          <button className="bar-link" onClick={() => setPanel("settings")} title="Which services make the images and translate the message">Models</button>
+          <button className="bar-link" onClick={() => setPanel("settings")} title="Which services make the images, translate the message and store the ads">Services</button>
           <button className="bar-link" onClick={() => setPanel("history")} title="Who did what">History</button>
           <div className="campaign-slot" ref={account}>
             <button className="avatar" aria-expanded={panel === "account"} onClick={() => setPanel(panel === "account" ? null : "account")}
@@ -414,6 +416,7 @@ function describe(event: string): string {
     "market.requested": "asked IT to set up",
     "campaign.restarted": "started the campaign over",
     "campaign.duplicated": "made this campaign as a copy of",
+    "export.azure": "sent to Azure:",
   } as Record<string, string>)[event] ?? event;
 }
 

@@ -120,7 +120,7 @@ export default function BriefStep() {
                 onChange={(e) => { set("audience", e.target.value); setAudienceUndo(null); }} />
               {audienceUndo && (
                 <span className="field-note">
-                  {audienceUndo.demo ? "A demo suggestion. Connect OpenAI under Models for one written for this brief. " : "Suggested from your products and message. Edit it to fit. "}
+                  {audienceUndo.demo ? "A demo suggestion. Connect OpenAI under Services for one written for this brief. " : "Suggested from your products and message. Edit it to fit. "}
                   {audienceUndo.before && audienceUndo.before !== draft.audience && (
                     <button className="link" onClick={() => { set("audience", audienceUndo.before); setAudienceUndo(null); }}>Put back what I had</button>
                   )}

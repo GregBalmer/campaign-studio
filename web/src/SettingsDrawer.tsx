@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { Image, Languages } from "lucide-react";
-import { api, type ProviderInfo, type ProviderKind, type ProviderLists } from "./api";
+import { Check, Cloud, Image, Languages } from "lucide-react";
+import { api, ApiError, type ProviderInfo, type ProviderKind, type ProviderLists } from "./api";
 import { Button, Drawer, useApp } from "./ui";
 
 // What each service does in the flow, so the choice makes sense before picking one.
@@ -20,11 +20,11 @@ export default function SettingsDrawer({ providers, setProviders, onClose }: {
 
   return (
     <Drawer onClose={onClose}>
-      <h2>Models</h2>
+      <h2>Services</h2>
 
       {GROUPS.map((g) => (
         <section key={g.kind} className="option-group">
-          <h3><span className="option-group-icon"><g.icon size={18} /></span>{g.title}</h3>
+          <h3><span className="option-group-icon"><g.icon size={22} strokeWidth={1.75} /></span>{g.title}</h3>
           <p className="option-group-note">{g.note}</p>
           {providers[g.kind].map((p) => {
             const rowKey = `${g.kind}/${p.id}`;
@@ -66,7 +66,91 @@ export default function SettingsDrawer({ providers, setProviders, onClose }: {
           })}
         </section>
       ))}
+
+      <StorageGroup />
     </Drawer>
+  );
+}
+
+/** Where the finished ads go. This computer always; Azure as well once a container link is pasted. */
+function StorageGroup() {
+  const { storage, setStorage, toast } = useApp();
+  const [open, setOpen] = useState(false);
+  const [link, setLink] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const until = storage.expires ? new Date(storage.expires).toLocaleDateString([], { month: "short", day: "numeric", year: "numeric" }) : null;
+
+  const connect = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setBusy(true); setError("");
+    try {
+      const r = await api.connectAzure(link.trim());
+      setStorage(r.storage); setLink(""); setOpen(false);
+      toast(storage.test ? "Azure test server connected." : "Azure connected.");
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : "Couldn't connect. Try again.");
+    } finally { setBusy(false); }
+  };
+  const disconnect = async () => {
+    try { setStorage((await api.disconnectAzure()).storage); toast("Azure disconnected."); }
+    catch (err) { toast(err instanceof ApiError ? err.message : "Couldn't disconnect.", "error"); }
+  };
+
+  return (
+    <section className="option-group">
+      <h3><span className="option-group-icon"><Cloud size={22} strokeWidth={1.75} /></span>Storage</h3>
+      <p className="option-group-note">Where the finished ads are saved, by product and size.</p>
+      <div className="option on static">
+        <span className="tick"><Check size={14} strokeWidth={3} /></span>
+        <span>
+          <span className="option-title">This computer <span className="badge">Always</span></span>
+          <span className="option-detail" style={{ display: "block" }}>Every ad, in the outputs folder.</span>
+        </span>
+      </div>
+      {storage.connected ? (
+        <div className="option on static">
+          <span className="tick"><Check size={14} strokeWidth={3} /></span>
+          <span style={{ flex: 1 }}>
+            <span className="option-title">Azure Blob Storage{storage.test && <span className="badge warn">Test</span>}</span>
+            <span className="option-detail" style={{ display: "block" }}>
+              Approved ads can be sent to <b>{storage.account}/{storage.container}</b>{until && <>. Link works until {until}</>}.
+            </span>
+          </span>
+          <button className="connect-link" onClick={disconnect}>Disconnect</button>
+        </div>
+      ) : (
+        <div className={`option connectable ${open ? "open" : ""}`}>
+          <button className="option-head" aria-expanded={open} onClick={() => setOpen(!open)}>
+            <span className="tick off" />
+            <span>
+              <span className="option-title">Azure Blob Storage</span>
+              <span className="option-detail" style={{ display: "block" }}>Also send the approved ads to your company's Azure storage.</span>
+            </span>
+            {!open && <span className="connect-link">Connect</span>}
+          </button>
+          {open && (
+            <form className="connect-form" onSubmit={connect}>
+              <label className="label" htmlFor="az-link">Container SAS link</label>
+              <input id="az-link" className="input" type="password" autoComplete="off" autoFocus
+                placeholder="https://….blob.core.windows.net/…?sv=…" value={link} onChange={(e) => setLink(e.target.value)} />
+              {error && <p className="field-note fail" style={{ margin: "6px 0 0" }}>{error}</p>}
+              <Button kind="primary" className="btn-block" busy={busy} disabled={!link.trim()}>Connect</Button>
+              <p className="connect-note">Checked by saving one small file to the container. Saved on this computer only.</p>
+              <details>
+                <summary>Where do I find this?</summary>
+                <ol>
+                  <li>In the Azure portal, open your storage account, then the container.</li>
+                  <li>Choose <b>Shared access tokens</b>.</li>
+                  <li>Tick <b>Create</b> and <b>Write</b>, set an end date, and generate it.</li>
+                  <li>Copy the <b>Blob SAS URL</b>.</li>
+                </ol>
+              </details>
+            </form>
+          )}
+        </div>
+      )}
+    </section>
   );
 }
 

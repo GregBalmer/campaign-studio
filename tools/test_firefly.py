@@ -178,7 +178,7 @@ class Errors(FireflyCase):
 
     def test_api_401_and_token_forgotten(self):
         self.fake.fail("generate", 401, {"error_code": "401013", "message": "Oauth token is not valid"})
-        self.fails_with("Adobe didn't accept the Firefly credentials. Check them under Models.")
+        self.fails_with("Adobe didn't accept the Firefly credentials. Check them under Services.")
         self.assertEqual(len(self.fake.seen("generate")), 1, "401 isn't retried")
         self.make()
         self.assertEqual(len(self.fake.seen("token")), 2, "a 401 should clear the saved token")

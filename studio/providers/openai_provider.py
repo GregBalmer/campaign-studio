@@ -25,7 +25,7 @@ RETRY_WAIT = 3  # seconds before the one automatic retry
 def _post(path: str, body: dict, timeout: int) -> dict:
     key = config.openai_key()
     if not key:
-        raise ProviderError("No OpenAI key is set. Add one under Models, or switch to Demo images.")
+        raise ProviderError("No OpenAI key is set. Add one under Services, or switch to Demo images.")
     req = urllib.request.Request(
         API + path,
         data=json.dumps(body).encode("utf-8"),
@@ -64,7 +64,7 @@ def _post(path: str, body: dict, timeout: int) -> dict:
 def _friendly(status: int, detail: str) -> str:
     low = detail.lower()
     if status == 401:
-        return "OpenAI didn't accept the key. Check it under Models."
+        return "OpenAI didn't accept the key. Check it under Services."
     if status == 429 and ("quota" in low or "billing" in low):
         return "The OpenAI account is out of credit. Add billing on platform.openai.com, then try again."
     if status == 429:

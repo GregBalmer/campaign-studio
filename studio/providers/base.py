@@ -41,4 +41,4 @@ class TextProvider:
 
     def describe_photo(self, png: bytes, name: str, brief: dict) -> str:
         """Describe a product photo the way the brief asks: color, shape, packaging."""
-        raise ProviderError("This translation service can't read photos. Choose OpenAI under Models.")
+        raise ProviderError("This translation service can't read photos. Choose OpenAI under Services.")

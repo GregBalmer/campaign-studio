@@ -13,6 +13,23 @@ Campaign Studio is a proof of concept for a global consumer-goods brand that shi
 
 Nothing is localised or resized until the key visual is approved, so a wrong image costs one generation, not a whole set.
 
+## The assignment, ask by ask
+
+| Requirement | Where it's met |
+|---|---|
+| A brief with two or more products, a market, an audience and a message | [`samples/long-light/brief.json`](samples/long-light/brief.json), edited on the **Brief** step. JSON (see *The brief format*). |
+| Reuse input assets when they exist | Daylight SPF 50 Mist uses the supplied photo. Photos can also be dropped in on the Brief. |
+| Generate missing assets with a GenAI image model | After-Sun Aloe Gel has no photo, so it's generated (OpenAI, or the [Firefly adapter](#adobe-firefly)). Free demo images with no key. |
+| At least three aspect ratios | 1:1 feed post, 9:16 story, 16:9 banner. |
+| The campaign message on the final posts, localized a plus | Set in real fonts on every ad, in English and Japanese. |
+| Run locally | `python3 start.py` for the app, [`cli.py`](cli.py) for the same pipeline from the command line. |
+| Outputs organized by product and aspect ratio | `outputs/<campaign>/<product>/<ratio>/` (see *What comes out*). |
+| README: how to run, example input and output, design decisions, assumptions | *Up and running*, *What comes out*, *Key design decisions*, *Assumptions and limitations*. |
+| Bonus: brand checks | Logo present and visible, brand colors used, on every ad (see *The checks*). |
+| Bonus: legal checks | Restricted words per language, flagged as you type and blocking approval. |
+| Bonus: logging and reporting | `report.json` per campaign, and **History** in the app. |
+| Storage (Azure, AWS or Dropbox) | Every ad is saved locally; approved ads can also go to **Azure Blob Storage** with one click (see *Azure storage*). |
+
 ---
 
 ## Up and running in 2 minutes
@@ -62,7 +79,7 @@ In production, sign-in comes from the client's single sign-on (Adobe, Okta or Mi
 
 **4. Try it**
 
-Click **Create key visuals** and follow the steps. To try your own brief, click **New campaign** at the top: start a blank one, or duplicate the current one and change it. **Restart demo** puts the sample back to how it shipped. With no API key it runs in **Demo mode**: images are drawn locally, instantly and for free, so you can try the whole flow. When you want real images, click **Models** at the top, paste an OpenAI API key, and you're done. The key is checked and saved on your computer only.
+Click **Create key visuals** and follow the steps. To try your own brief, click **New campaign** at the top: start a blank one, or duplicate the current one and change it. **Restart demo** puts the sample back to how it shipped. With no API key it runs in **Demo mode**: images are drawn locally, instantly and for free, so you can try the whole flow. When you want real images, click **Services** at the top, paste an OpenAI API key, and you're done. The key is checked and saved on your computer only.
 
 > **If something goes wrong**, the window says what to do in plain words. The most common one: the Mac asks to install "command line developer tools" the first time Python is used. Say yes, then start it again.
 
@@ -131,6 +148,16 @@ outputs/long-light/
 }
 ```
 
+## Azure storage
+
+Every ad is always saved on this computer. Once a container is connected, **Send to Azure** on the Review step uploads the approved ads and `report.json` to the client's Azure Blob Storage, in the same folders: `<campaign>/<product>/<ratio>/<market>.png`. Sending again replaces the files, so it's safe to repeat.
+
+**How to connect it.** In the Azure portal, open the storage account, then the container, then **Shared access tokens**. Tick **Create** and **Write**, set an end date, and copy the **Blob SAS URL**. In the app, open **Services**, then **Storage → Azure Blob Storage → Connect**, and paste it. The app checks the link, saves one small file (`campaign-studio-check.txt`) to prove it can write, and keeps the link in `.env` on this computer only.
+
+**Why a SAS link.** It's how a client's IT team would hand over access: one container, write-only, until a set date. No account key or password is stored, and nobody can read or list the container through it. The link never goes back to the browser, into a log or into an error message.
+
+**How it's tested.** [`studio/storage.py`](studio/storage.py) is written to Microsoft's Put Blob documentation. [`tools/fake_azure.py`](tools/fake_azure.py) is a stand-in that answers the way Azure documents, and [`tools/test_azure.py`](tools/test_azure.py) runs 23 offline tests on every push: the link checks, the folders and headers sent, and every failure (expired, read-only, wrong container, busy, unreachable) as a plain sentence. It has also been run against a real Azure storage account: on 19 November 2026 it uploaded a campaign's approved ads and `report.json` to a container in West US 3.
+
 ## Launching in a new market
 
 **Add market** lists two kinds of market. **Ready to use** markets work straight away. Markets **new to the brand** (South Korea, China and Saudi Arabia in the sample) need a one-time setup, so instead of half-working they ask for it, in one click:
@@ -170,9 +197,9 @@ An ad that **fails** a check can't be approved. A **warning** is the reviewer's 
 
 **Layout tries options and picks the best.** For each size the message card is tried at the bottom, top, left and right. It takes the position that keeps clear of the product, then prefers clean line breaks and full-size type. Japanese breaks at natural phrase boundaries, not mid-word. Stories keep text out of the strips that Instagram and TikTok cover with their own buttons.
 
-**Images and translation are two swap points.** The workflow calls two small interfaces in `studio/providers/`: one makes images, one translates. They're chosen separately under Models because not every service does both: **Adobe Firefly** makes images and has no text translation, so a team can pair Firefly images with another service's translation. Demo, OpenAI and Firefly (see below) ship for images; Demo and OpenAI for translation. Nothing the creative team sees changes with the choice. There's no silent fallback: if the chosen service fails, the person sees why, in plain words.
+**Images and translation are two swap points.** The workflow calls two small interfaces in `studio/providers/`: one makes images, one translates. They're chosen separately under Services because not every service does both: **Adobe Firefly** makes images and has no text translation, so a team can pair Firefly images with another service's translation. Demo, OpenAI and Firefly (see below) ship for images; Demo and OpenAI for translation. Nothing the creative team sees changes with the choice. There's no silent fallback: if the chosen service fails, the person sees why, in plain words.
 
-**Built to be run by the client, not by engineers.** One command, one dependency (Pillow), and the interface comes pre-built, so there's no Node or npm for the reviewer. It runs locally on `127.0.0.1` only. Errors are written for a creative team ("OpenAI didn't accept the key. Check it under Models."), not as stack traces.
+**Built to be run by the client, not by engineers.** One command, one dependency (Pillow), and the interface comes pre-built, so there's no Node or npm for the reviewer. It runs locally on `127.0.0.1` only. Errors are written for a creative team ("OpenAI didn't accept the key. Check it under Services."), not as stack traces.
 
 **Approvals belong to a signed-in person.** The server stamps every approval, rejection and edit with whoever is signed in; it ignores any name the browser sends. Sessions are random tokens in an HttpOnly, SameSite=Strict cookie, and passwords are stored as salted PBKDF2 hashes in `workspace/team.json`. It's a stand-in for the client's single sign-on, built so that the audit trail in `report.json` means something.
 
@@ -195,16 +222,17 @@ The CLI records its approvals as `cli`, so the report never pretends a person re
 
 In production a brand like this would use **Adobe Firefly Services**: its models are trained on licensed content and offered for commercial use, which matters for a global consumer brand. Firefly is an enterprise API. The client licenses it from Adobe, and their admin creates API credentials in the Adobe Developer Console under the client's own organisation.
 
-**There is a Firefly adapter, and it has not been run against a live Firefly account.** I don't have Firefly Services access. The adapter ([`studio/providers/firefly.py`](studio/providers/firefly.py)) is written to Adobe's published API as read on 18 November 2026, including the OpenAPI file their reference links to. The code, the Models panel and this README all say so, and nothing is labelled as made by Adobe Firefly unless it came from Adobe's servers.
+**There is a Firefly adapter, and it has not been run against a live Firefly account.** I don't have Firefly Services access. The adapter ([`studio/providers/firefly.py`](studio/providers/firefly.py)) is written to Adobe's published API as read on 18 November 2026, including the OpenAPI file their reference links to. The code, the Services panel and this README all say so, and nothing is labelled as made by Adobe Firefly unless it came from Adobe's servers.
 
 **What it does.** It signs in with the organisation's client ID and secret, starts an image job (`POST /v3/images/generate-async`), waits for it, and downloads the picture. It asks for 2048×2048, a size Adobe documents for Image 3 and Image 4, and the app crops and resizes from there as it does for any generator. Each failure becomes one plain sentence: wrong credentials, no Firefly access, allowance used up, a content-policy refusal, a busy or broken service, a job that failed or took too long.
 
-**How to connect it.** In the app, open **Models** at the top. Under **Connect Adobe Firefly**, paste the client ID and client secret from the Adobe Developer Console (your project → add the Firefly Services API → OAuth Server-to-Server). They're checked with Adobe's sign-in server, saved on this computer only, in `.env`, and Firefly becomes a choice under **Images**. Firefly is never chosen automatically; a person selects it.
+**How to connect it.** In the app, open **Services** at the top. Under **Connect Adobe Firefly**, paste the client ID and client secret from the Adobe Developer Console (your project → add the Firefly Services API → OAuth Server-to-Server). They're checked with Adobe's sign-in server, saved on this computer only, in `.env`, and Firefly becomes a choice under **Images**. Firefly is never chosen automatically; a person selects it.
 
 **How the wiring is proven without access.** [`tools/fake_firefly.py`](tools/fake_firefly.py) is a small stand-in for Adobe's sign-in and Firefly servers. It answers in the shapes Adobe documents, records every request, and can be told to fail in a chosen way.
 
 ```bash
 python3 tools/test_firefly.py     # 39 tests: every request, every error message, the retry rule, the safety checks
+python3 tools/test_azure.py       # 23 tests: the Azure link checks, uploads and every failure message
 python3 tools/smoke_test.py       # also runs those, then makes a whole campaign through the stand-in server
 ```
 
@@ -214,7 +242,7 @@ Both are offline and need no key, so they run on every push. This proves the ada
 
 ## Assumptions and limitations
 
-- **Storage is a local folder.** The brief mentions Azure, AWS or Dropbox. Outputs are written by one function (`Campaign.fan_out`) and served by another, so a cloud bucket is a contained change, but it isn't built.
+- **Cloud storage is Azure only, and sent by a person.** Approved ads go to Azure when someone clicks **Send to Azure**, not automatically. AWS S3 and Dropbox would sit beside `studio/storage.py` as other targets; they aren't built.
 - **The Firefly adapter is untested against the live service** (see *Adobe Firefly*). Three details couldn't be confirmed from Adobe's documentation and are handled defensively: the allowed range for a seed (kept between 1 and 100,000, as in every documented example); how this endpoint reports a content-policy refusal (status 451, Adobe's policy error codes and a match on the message text are all treated as one); and the sign-in server's wording when a scope is refused. Image 5 and custom models aren't supported.
 - **The product box starts as a guess.** Demo images report exactly where the product is. For OpenAI and Firefly images and supplied photos, the box starts at a sensible default (or the `photo_focal` and `photo_zone` given in the brief), and a person fits it in step 2.
 - **Translations vary from run to run.** That's why a person approves each one, sees what it says in English, and can edit it.
@@ -242,6 +270,7 @@ studio/
   checks.py           the eight checks
   brief.py            brief validation in plain language
   providers/          mock.py, openai_provider.py, firefly.py: the image and translation swap points
+  storage.py          Azure Blob Storage: send the approved ads to the client's container
   server.py           local JSON API + static UI (standard library only)
   auth.py             sign-in: team, hashed passwords, sessions
   fonts/              Inter, Noto Sans JP (OFL)
@@ -251,6 +280,7 @@ samples/team.json     the demo people, copied to workspace/team.json on first ru
 tools/team.py         add, list or remove the people who can sign in
 tools/fake_firefly.py a stand-in for Adobe's servers, for testing Firefly with no account
 tools/test_firefly.py the Firefly adapter's tests (offline)
+tools/fake_azure.py   a stand-in for Azure Blob Storage; tools/test_azure.py, its tests (offline)
 tools/                smoke_test.py (fresh-install test used by CI), screenshots.py (retakes the README screenshots), sample-asset scripts, a contact-sheet helper
 .github/workflows/    fresh-install.yml: the fresh-install test (Windows and Linux; macOS once public)
 ```
@@ -271,6 +301,6 @@ npm run dev
 
 Open `localhost:5173`, which forwards API calls to the running app. Run `npm run build` to update `web/dist`, the version everyone else gets.
 
-**Settings** (optional, in `.env`): `OPENAI_API_KEY`, `STUDIO_SLACK_WEBHOOK` (where new-market requests post), `STUDIO_IMAGE_MODEL` (default `gpt-image-2.6-flare`), `STUDIO_TEXT_MODEL` (default `gpt-6-luna`) and `STUDIO_PORT` (default `8765`; the next free port is used if it's taken). For Firefly: `FIREFLY_CLIENT_ID` and `FIREFLY_CLIENT_SECRET` (the Models panel saves these), `FIREFLY_MODEL_VERSION` (`image3`, `image4_standard` or `image4_ultra`; left out, Adobe picks) and `FIREFLY_SCOPES`. `FIREFLY_IMS_URL` and `FIREFLY_API_URL` are for tests only: setting either marks everything made as coming from a test server.
+**Settings** (optional, in `.env`): `OPENAI_API_KEY`, `STUDIO_SLACK_WEBHOOK` (where new-market requests post), `STUDIO_IMAGE_MODEL` (default `gpt-image-2.6-flare`), `STUDIO_TEXT_MODEL` (default `gpt-6-luna`) and `STUDIO_PORT` (default `8765`; the next free port is used if it's taken). For Firefly: `FIREFLY_CLIENT_ID` and `FIREFLY_CLIENT_SECRET` (the Services panel saves these), `FIREFLY_MODEL_VERSION` (`image3`, `image4_standard` or `image4_ultra`; left out, Adobe picks) and `FIREFLY_SCOPES`. `FIREFLY_IMS_URL` and `FIREFLY_API_URL` are for tests only: setting either marks everything made as coming from a test server. For Azure: `AZURE_STORAGE_SAS_URL` (the Services panel saves it); `AZURE_TEST_HOST` points it at the stand-in, for tests only.
 
 Licence: MIT (code). Fonts: SIL Open Font Licence 1.1 (see `studio/fonts/`).

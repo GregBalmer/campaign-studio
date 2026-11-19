@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useRef, useState, type ReactNode } from "react";
 import { AlertTriangle, Check as CheckIcon, Loader2, X } from "lucide-react";
-import type { Check, Status, View } from "./api";
+import type { Check, Status, StorageInfo, View } from "./api";
 
 // ---------------------------------------------------------------- app context
 
@@ -17,6 +17,9 @@ export interface Ctx {
   goTo: (step: number) => void;
   /** True when IT has connected a Slack channel for requests. */
   slack: boolean;
+  /** Cloud storage (Azure), as set under Services. */
+  storage: StorageInfo;
+  setStorage: (s: StorageInfo) => void;
   /** Errors that stay where they happened, keyed like `run`'s keys. */
   errors: Record<string, string>;
   retry: (key: string) => void;

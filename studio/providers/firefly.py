@@ -66,8 +66,8 @@ NATIVE = 2048       # the square size asked of Firefly; resized to what the app 
 MODEL_VERSIONS = ("image3", "image4_standard", "image4_ultra")
 POLICY_CODES = ("legal_error", "prompt_unsafe", "prompt_entity_denied", "image_unsafe")
 
-NO_CREDENTIALS = "No Firefly credentials are set. Add them under Models, or choose another image generator."
-BAD_CREDENTIALS = "Adobe didn't accept the Firefly credentials. Check the client ID and secret under Models."
+NO_CREDENTIALS = "No Firefly credentials are set. Add them under Services, or choose another image generator."
+BAD_CREDENTIALS = "Adobe didn't accept the Firefly credentials. Check the client ID and secret under Services."
 BAD_SCOPE = ("These credentials aren't set up for Firefly. Ask your Adobe admin to add the "
              "Firefly Services API to the project.")
 NO_ACCESS = "This Adobe organisation doesn't have access to Firefly Services. Ask your Adobe admin."
@@ -229,7 +229,7 @@ def _is_policy(status: int, payload: dict) -> bool:
 def _friendly(e: _Refused) -> str:
     status, payload = e.status, e.payload
     if status == 401:
-        return "Adobe didn't accept the Firefly credentials. Check them under Models."
+        return "Adobe didn't accept the Firefly credentials. Check them under Services."
     if status == 403:
         why = e.headers.get("x-access-error", "")
         if why == "quota_exhausted":

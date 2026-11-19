@@ -154,9 +154,28 @@ class Handler(BaseHTTPRequestHandler):
 
         if parts == ["status"]:
             from .notify import slack_webhook
+            from . import storage
             return self._json({"providers": providers.available(),
                                "default_providers": {k: providers.default_name(k) for k in providers.KINDS},
-                               "slack": bool(slack_webhook())})
+                               "slack": bool(slack_webhook()), "storage": storage.describe()})
+
+        if parts == ["settings", "azure"] and method == "POST":
+            # The link is checked, then saved in .env on this computer. It never comes back to the browser.
+            from . import storage
+            link = str(b.get("link") or "").strip()
+            if not link:
+                raise StudioError("Paste the container's SAS link.")
+            try:
+                storage.check(link)
+            except storage.StorageError as e:
+                raise StudioError(str(e)) from None
+            config.save_env_value(storage.ENV_KEY, link)
+            return self._json({"storage": storage.describe()})
+
+        if parts == ["settings", "azure"] and method == "DELETE":
+            from . import storage
+            config.save_env_value(storage.ENV_KEY, "")
+            return self._json({"storage": storage.describe()})
 
         if parts == ["settings", "key"] and method == "POST":
             key = (b.get("key") or "").strip()
@@ -291,6 +310,10 @@ class Handler(BaseHTTPRequestHandler):
             else:
                 subprocess.Popen(["xdg-open", str(out)])
             return self._json({"ok": True})
+
+        if head == "send-azure" and method == "POST":
+            pipeline.send_to_azure(cid, by)
+            return view()
 
         if head == "fanout" and method == "POST":
             return with_campaign(cid, lambda c: (c.fan_out(by), view(c))[1])
