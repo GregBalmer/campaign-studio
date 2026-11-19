@@ -32,8 +32,10 @@ export default function ReviewStep() {
     rejected: entries.filter(([, f]) => f.decision?.value === "rejected").length,
   };
   const open = counts.total - counts.approved - counts.rejected;
-  const flaggedOpen = entries.filter(([, f]) => !f.decision && f.status !== "pass").length;
-  const passingOpen = entries.filter(([, f]) => !f.decision && f.status === "pass");
+  // Everything still waiting that isn't an outright failure. Warnings are the reviewer's call,
+  // and approving in bulk counts as that call; the checks stay on each ad for anyone who looks.
+  const passingOpen = entries.filter(([, f]) => !f.decision && f.status !== "fail");
+  const failingOpen = entries.filter(([, f]) => !f.decision && f.status === "fail").length;
 
   const shown = entries.filter(([, f]) =>
     filter === "all" ? true
@@ -147,13 +149,13 @@ export default function ReviewStep() {
           {/* The next thing to do sits where Continue sits on every other step. While ads that
               pass every check are waiting, that's approving them; after that, it's the download. */}
           <NextPanel label="Ads" figure={`${counts.approved} of ${counts.total} approved`}
-            detail={passingOpen.length > 0 ? `${passingOpen.length} pass every check and can be approved together.${flaggedOpen ? ` ${flaggedOpen} flagged need a closer look first.` : ""}`
-              : flaggedOpen > 0 ? `${flaggedOpen} flagged ${flaggedOpen === 1 ? "ad needs" : "ads need"} a closer look. Click ${flaggedOpen === 1 ? "it" : "one"} to decide.`
+            detail={passingOpen.length > 0 ? `${passingOpen.length} ready to approve together.${failingOpen ? ` ${failingOpen} ${failingOpen === 1 ? "fails a check" : "fail a check"} and can't be approved.` : ""}`
+              : failingOpen > 0 ? `${failingOpen} ${failingOpen === 1 ? "ad fails a check" : "ads fail a check"}. Click ${failingOpen === 1 ? "it" : "one"} to see why.`
               : open > 0 ? `${open} still ${open === 1 ? "needs" : "need"} a decision.`
               : undefined}>
             {passingOpen.length > 0 ? (
               <Button kind="primary" size="lg" className="btn-block" icon={<CheckCheck size={18} />} busy={busy.has("bulk")} onClick={approveAllPassing}>
-                Approve all that pass ({passingOpen.length})
+                Approve all ({passingOpen.length})
               </Button>
             ) : (
               <a className={`btn btn-primary btn-lg btn-block ${counts.approved ? "" : "disabled"}`}
