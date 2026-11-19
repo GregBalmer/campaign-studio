@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, LogOut, Plus, RotateCcw, Trash2, X } from "lucide-react";
+import { Check, ChevronDown, Copy, FilePlus, LogOut, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderLists, type View } from "./api";
-import { AppCtx, Button, Drawer, clock, useDismiss, type Ctx } from "./ui";
+import { AppCtx, Button, Drawer, Modal, clock, useDismiss, type Ctx } from "./ui";
 import SignIn from "./SignIn";
 import BriefStep from "./steps/BriefStep";
 import KeyVisualStep from "./steps/KeyVisualStep";
@@ -43,6 +43,7 @@ export default function App() {
   const [me, setMe] = useState<Person | null | undefined>(undefined);
   const [demo, setDemo] = useState<DemoAccount[]>([]);
   const [panel, setPanel] = useState<"settings" | "history" | "campaigns" | "new-campaign" | "account" | null>(null);
+  const [creating, setCreating] = useState<"blank" | "duplicate" | null>(null);
   const toastTimer = useRef<number>();
   const switcher = useRef<HTMLDivElement>(null);
   const creator = useRef<HTMLDivElement>(null);
@@ -224,10 +225,14 @@ export default function App() {
               <Plus size={14} strokeWidth={2.25} /><span className="bar-action-label">New campaign</span>
             </button>
             {panel === "new-campaign" && (
-              <NewCampaignForm onCreate={async (name) => {
-                setPanel(null);
-                await run("new", async () => { const v = await api.createCampaign(name); await refreshCampaigns(); setStep(0); return v; });
-              }} />
+              <div className="menu new-campaign-menu">
+                <button className="menu-item" onClick={() => { setPanel(null); setCreating("blank"); }}>
+                  <span className="row"><FilePlus size={15} /> Blank campaign</span>
+                </button>
+                <button className="menu-item" onClick={() => { setPanel(null); setCreating("duplicate"); }}>
+                  <span className="row"><Copy size={15} /> Duplicate “{view.brief.campaign || "Untitled campaign"}”</span>
+                </button>
+              </div>
             )}
           </div>
           <button className="bar-link" onClick={() => setPanel("settings")} title="Which services make the images and translate the message">Models</button>
@@ -255,7 +260,6 @@ export default function App() {
         <div className="camphead-inner">
           <div className="camphead-row">
             <div className="camphead-title">
-              <div className="camp-label">Campaign</div>
               <div className="camphead-name-row">
               <div className="campaign-slot" ref={switcher}>
                 <button className="campaign-switch" aria-expanded={panel === "campaigns"} aria-label="Switch campaign"
@@ -286,15 +290,17 @@ export default function App() {
                   />
                 )}
               </div>
-              {/* Back to step 1 without hunting through a menu. It asks once, in place. */}
-              <StartOver sample={view.sample} busy={busy.has("reset")} onConfirm={async () => {
-                await run("reset", async () => {
-                  const v = await api.reset(view.id, reviewerName);
-                  setStep(0);
-                  toast(view.sample ? "The sample is back at the start." : "Started over. Your brief is kept.");
-                  return v;
-                });
-              }} />
+              {/* The sample can be put back to how it shipped, for the next demo. It asks first, in a small modal. */}
+              {view.sample && (
+                <RestartDemo busy={busy.has("reset")} onConfirm={async () => {
+                  await run("reset", async () => {
+                    const v = await api.reset(view.id, reviewerName);
+                    setStep(0);
+                    toast("The demo is back at the start.");
+                    return v;
+                  });
+                }} />
+              )}
               </div>
             </div>
             <dl className="camp-stats">
@@ -346,11 +352,24 @@ export default function App() {
           {view.log.length === 0 && <p className="muted">Nothing yet.</p>}
           {[...view.log].reverse().filter((l) => !(l.event === "frames.rendered" && /^0 /.test(l.detail))).map((l, i) => (
             <div className="history-item" key={i}>
-              <span className="when">{clock(l.at)}</span>
+              <span className="when">{(({ day, time }) => <>{day && <span className="when-day">{day}</span>}{time}</>)(clock(l.at))}</span>
               <span><b>{l.by}</b> {describe(l.event)} <span className="muted">{humanDetail(view, l.event, l.detail)}</span></span>
             </div>
           ))}
         </Drawer>
+      )}
+      {creating && (
+        <NewCampaignModal kind={creating} source={view.brief.campaign || "Untitled campaign"} onClose={() => setCreating(null)}
+          onCreate={async () => {
+            const kind = creating;
+            setCreating(null);
+            await run("new", async () => {
+              const v = kind === "duplicate" ? await api.duplicateCampaign(view.id) : await api.createCampaign("Untitled campaign");
+              await refreshCampaigns();
+              setStep(0);
+              return v;
+            });
+          }} />
       )}
       {toastMsg && (
         <div className={`toast ${toastMsg.kind}`} role="status">
@@ -394,6 +413,7 @@ function describe(event: string): string {
     "frame.cleared": "cleared the decision on",
     "market.requested": "asked IT to set up",
     "campaign.restarted": "started the campaign over",
+    "campaign.duplicated": "made this campaign as a copy of",
   } as Record<string, string>)[event] ?? event;
 }
 
@@ -422,14 +442,23 @@ function humanDetail(view: View, event: string, detail: string): string {
   return detail;
 }
 
-/** "New campaign" asks for a name and nothing else. */
-function NewCampaignForm({ onCreate }: { onCreate: (name: string) => void }) {
-  const [name, setName] = useState("");
+/** One popup for both ways to start a campaign. No name asked: it's the first field on the Brief. */
+function NewCampaignModal({ kind, source, onClose, onCreate }: {
+  kind: "blank" | "duplicate"; source: string; onClose: () => void; onCreate: () => void;
+}) {
   return (
-    <form className="menu row new-campaign-form" onSubmit={(e) => { e.preventDefault(); if (name.trim()) onCreate(name.trim()); }}>
-      <input className="input" autoFocus aria-label="Campaign name" placeholder="Name the new campaign" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: "8px 10px", fontSize: 14 }} />
-      <Button kind="primary" size="sm" type="submit" disabled={!name.trim()}>Create</Button>
-    </form>
+    <Modal onClose={onClose}>
+      <h2>{kind === "blank" ? "New campaign" : `Duplicate “${source}”`}</h2>
+      <p className="muted" style={{ margin: "0 0 20px", lineHeight: 1.55 }}>
+        {kind === "blank"
+          ? "Starts with an empty brief. You can name it on the first step."
+          : "Same brief and photos. Key visuals, translations and approvals start fresh."}
+      </p>
+      <div className="modal-actions">
+        <Button kind="ghost" onClick={onClose}>Cancel</Button>
+        <Button kind="primary" autoFocus onClick={onCreate}>Create</Button>
+      </div>
+    </Modal>
   );
 }
 
@@ -466,22 +495,21 @@ function CampaignMenu({ campaigns, current, onPick, onDelete }: {
   );
 }
 
-/** Start over: one button beside the campaign name, which turns into the question. */
-function StartOver({ sample, busy, onConfirm }: { sample: boolean; busy: boolean; onConfirm: () => void }) {
+/** Restart demo: puts the sample back to how it shipped, after asking in a small modal. */
+function RestartDemo({ busy, onConfirm }: { busy: boolean; onConfirm: () => void }) {
   const [asking, setAsking] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useDismiss(ref, asking, () => setAsking(false));
   return (
-    <div className="start-over" ref={ref}>
-      {asking ? (
-        <span className="start-over-ask">
-          <span>{sample ? "Put the sample back to the start?" : "Clear the key visuals, translations and approvals? Your brief stays."}</span>
-          <Button size="sm" kind="ghost" onClick={() => setAsking(false)}>Keep working</Button>
-          <Button size="sm" kind="primary" autoFocus busy={busy} onClick={() => { setAsking(false); onConfirm(); }}>Start over</Button>
-        </span>
-      ) : (
-        <Button size="sm" kind="ghost" icon={<RotateCcw size={14} strokeWidth={2.25} />} onClick={() => setAsking(true)}>Start over</Button>
+    <>
+      <Button size="sm" kind="ghost" icon={<RotateCcw size={14} strokeWidth={2.25} />} busy={busy} onClick={() => setAsking(true)}>Restart demo</Button>
+      {asking && (
+        <Modal className="modal-compact" onClose={() => setAsking(false)}>
+          <h2>This will restart the demo</h2>
+          <div className="modal-actions">
+            <Button kind="secondary" onClick={() => setAsking(false)}>Cancel</Button>
+            <Button kind="primary" autoFocus onClick={() => { setAsking(false); onConfirm(); }}>Restart</Button>
+          </div>
+        </Modal>
       )}
-    </div>
+    </>
   );
 }

@@ -177,6 +177,7 @@ export const api = {
     call<{ providers: ProviderLists }>("POST", "settings/firefly", { client_id, client_secret }),
   campaigns: () => call<CampaignSummary[]>("GET", "campaigns"),
   createCampaign: (name: string) => call<View>("POST", "campaigns", { name }),
+  duplicateCampaign: (from: string) => call<View>("POST", "campaigns", { from }),
   get: (id: string) => call<View>("GET", `campaigns/${id}`),
   reset: (id: string, by: string) => call<View>("POST", `campaigns/${id}/reset`, { by }),
   revealOutputs: (id: string) => call<{ ok: boolean }>("POST", `campaigns/${id}/reveal`, {}),

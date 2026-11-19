@@ -2,7 +2,7 @@
 
 The video has one job: show a reviewer they can run this themselves, then show what it does. Record at 1440×900, the browser full-screen, no cuts during setup.
 
-**Before recording:** in the app, click **Start over** beside the campaign name. Have an OpenAI key ready in the app (**Models** shows **OpenAI**). Download a fresh **Code → Download ZIP** from GitHub and unzip it, so the Mac's first-time warning appears on camera: it's the one step a reviewer will get stuck on. Have the folder open in Finder, and close any Campaign Studio window that's already running.
+**Before recording:** in the app, click **Restart demo** beside the campaign name. Have an OpenAI key ready in the app (**Models** shows **OpenAI**). Download a fresh **Code → Download ZIP** from GitHub and unzip it, so the Mac's first-time warning appears on camera: it's the one step a reviewer will get stuck on. Have the folder open in Finder, and close any Campaign Studio window that's already running.
 
 | Time | Screen | Say |
 |---|---|---|

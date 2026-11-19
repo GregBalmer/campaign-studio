@@ -87,12 +87,12 @@ export function Markers({ checks }: { checks: Check[] }) {
   );
 }
 
-export function Modal({ children, onClose }: { children: ReactNode; onClose: () => void }) {
+export function Modal({ children, onClose, className = "" }: { children: ReactNode; onClose: () => void; className?: string }) {
   useEscape(onClose);
   return (
     <>
       <div className="scrim" onClick={onClose} />
-      <div className="modal" role="dialog" aria-modal="true">{children}</div>
+      <div className={`modal ${className}`} role="dialog" aria-modal="true">{children}</div>
     </>
   );
 }
@@ -157,8 +157,13 @@ export function timeAgo(iso?: string | null): string {
   return new Date(iso).toLocaleDateString();
 }
 
-export function clock(iso: string): string {
-  return new Date(iso).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+/** A time for the History list: "7:15 PM" today, "Yesterday" or "Nov 17" above it otherwise. */
+export function clock(iso: string): { day: string; time: string } {
+  const d = new Date(iso);
+  const time = d.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  const days = Math.round((new Date().setHours(0, 0, 0, 0) - new Date(iso).setHours(0, 0, 0, 0)) / 86400000);
+  const day = days === 0 ? "" : days === 1 ? "Yesterday" : d.toLocaleDateString([], { month: "short", day: "numeric" });
+  return { day, time };
 }
 
 export function FormatGlyph({ ratio, h = 26 }: { ratio: string; h?: number }) {

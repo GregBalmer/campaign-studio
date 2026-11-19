@@ -284,8 +284,8 @@ function Lightbox({ keys, current, onMove, onClose }: { keys: string[]; current:
           <div className="space" />
 
           {f.decision ? (
-            <div className={f.decision.value === "approved" ? "approved-stamp" : "problems"} style={{ margin: 0 }}>
-              {f.decision.value === "approved" ? <Check size={18} strokeWidth={3} /> : <X size={18} />}
+            <div className={`approved-stamp ${f.decision.value === "rejected" ? "rejected" : ""}`} style={{ margin: 0 }}>
+              {f.decision.value === "approved" ? <Check size={18} strokeWidth={3} /> : <X size={18} strokeWidth={3} />}
               <span>
                 {f.decision.value === "approved" ? "Approved" : "Rejected"} by {f.decision.by} · {timeAgo(f.decision.at)}
                 {f.decision.note && <><br /><span style={{ fontWeight: 450 }}>“{f.decision.note}”</span></>}

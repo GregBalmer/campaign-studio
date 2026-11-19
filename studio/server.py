@@ -182,7 +182,10 @@ class Handler(BaseHTTPRequestHandler):
 
         if parts == ["campaigns"]:
             if method == "POST":
-                cid = pipeline.create_campaign(b.get("name") or "New campaign")
+                if b.get("from"):
+                    cid = pipeline.duplicate_campaign(str(b["from"]), by)
+                else:
+                    cid = pipeline.create_campaign(b.get("name") or "Untitled campaign")
                 return self._json(Campaign(cid).view())
             return self._json(pipeline.list_campaigns())
 

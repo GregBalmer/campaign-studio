@@ -108,14 +108,37 @@ def list_campaigns() -> list[dict]:
     return out
 
 
-def create_campaign(name: str) -> str:
-    """Start a new campaign from the first sample's structure, blanked out."""
-    ensure_samples()
+def _free_id(name: str) -> str:
     cid = slug(name)
     n = 2
     while (config.WORKSPACE / cid).exists():
         cid = f"{slug(name)}-{n}"
         n += 1
+    return cid
+
+
+def duplicate_campaign(src: str, by: str | None = None) -> str:
+    """A new campaign with the same brief and photos. Key visuals, translations,
+    ads and decisions aren't copied: the copy is a fresh run on the same brief."""
+    ensure_samples()
+    with _lock:
+        original = Campaign(src)  # checks the id and that the campaign exists
+        name = f"{original.brief.get('campaign') or 'Untitled campaign'} (copy)"
+        cid = _free_id(name)
+        d = config.WORKSPACE / cid
+        shutil.copytree(original.dir / "assets", d / "assets") if (original.dir / "assets").exists() else (d / "assets").mkdir(parents=True)
+        brief = dict(original.brief, campaign=name)
+        (d / "brief.json").write_text(json.dumps(brief, indent=2, ensure_ascii=False), encoding="utf-8")
+        copy = Campaign(cid)
+        copy.log(by, "campaign.duplicated", original.brief.get("campaign") or src)
+        copy.save()
+    return cid
+
+
+def create_campaign(name: str) -> str:
+    """Start a new campaign from the first sample's structure, blanked out."""
+    ensure_samples()
+    cid = _free_id(name)
     d = config.WORKSPACE / cid
     (d / "assets").mkdir(parents=True)
     template = json.loads(next(config.SAMPLES.glob("*/brief.json")).read_text(encoding="utf-8"))

@@ -1,10 +1,12 @@
 import { useState } from "react";
+import { Image, Languages } from "lucide-react";
 import { api, type ProviderInfo, type ProviderKind, type ProviderLists } from "./api";
 import { Button, Drawer, useApp } from "./ui";
 
-const GROUPS: { kind: ProviderKind; title: string }[] = [
-  { kind: "image", title: "Images" },
-  { kind: "text", title: "Translation" },
+// What each service does in the flow, so the choice makes sense before picking one.
+const GROUPS: { kind: ProviderKind; title: string; note: string; icon: typeof Image }[] = [
+  { kind: "image", title: "Images", icon: Image, note: "Creates a key visual when a product has no photo of its own." },
+  { kind: "text", title: "Translation", icon: Languages, note: "Adapts the message for each market. You check it in English before it\u2019s used." },
 ];
 
 export default function SettingsDrawer({ providers, setProviders, onClose }: {
@@ -22,7 +24,8 @@ export default function SettingsDrawer({ providers, setProviders, onClose }: {
 
       {GROUPS.map((g) => (
         <section key={g.kind} className="option-group">
-          <h3>{g.title}</h3>
+          <h3><span className="option-group-icon"><g.icon size={18} /></span>{g.title}</h3>
+          <p className="option-group-note">{g.note}</p>
           {providers[g.kind].map((p) => {
             const rowKey = `${g.kind}/${p.id}`;
             const title = (
