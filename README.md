@@ -83,7 +83,7 @@ Click **Create key visuals** and follow the steps. To try your own brief, click 
 
 > **If something goes wrong**, the window says what to do in plain words. The most common one: the Mac asks to install "command line developer tools" the first time Python is used. Say yes, then start it again.
 
-**Windows, Mac or Linux.** On every push, a GitHub workflow ([`fresh-install.yml`](.github/workflows/fresh-install.yml)) installs and runs Campaign Studio from a fresh copy on Windows (Python 3.9 and 3.12) and Linux, with no API key, including the double-click launcher. It walks the whole flow, checks the download, and saves a screenshot of the app as it renders on each machine. GitHub's macOS machines aren't available to this private repository, so the Mac is tested by hand; the macOS job switches on if the repository is made public. [`tools/screenshots.py`](tools/screenshots.py) retakes the screenshots below from the running app.
+**Windows, Mac or Linux.** On every push, a GitHub workflow ([`fresh-install.yml`](.github/workflows/fresh-install.yml)) installs and runs Campaign Studio from a fresh copy on Windows (Python 3.9 and 3.12), macOS and Linux, with no API key, including the double-click launcher. It walks the whole flow, checks the download, and saves a screenshot of the app as it renders on each machine. [`tools/screenshots.py`](tools/screenshots.py) retakes the screenshots below from the running app.
 
 **Want it in its own window?** In Chrome or Edge, click the install icon in the address bar (or **⋮ → Install Campaign Studio**). You get an app window and a dock or taskbar icon. It still needs the Start Campaign Studio window running, the same as the browser tab.
 
@@ -254,7 +254,7 @@ Both are offline and need no key, so they run on every push. This proves the ada
 - **Demo images are illustrations,** drawn locally to make the flow free to try. The report labels them `mock`.
 - **The sample's "client-supplied" product photo** (`samples/long-light/assets/daylight-mist.png`) was itself generated with OpenAI for this demo. Solvane is a fictional brand.
 - **Performance insights** (CTR and conversions by variant, goal 5 in the brief) aren't covered. `report.json` gives each ad a stable identity, which is what a later analytics join would use.
-- **Tested on:** macOS by hand with Python 3.9 (the version macOS ships) and 3.12, from a clean copy with and without an API key. Windows and Linux automatically through the fresh-install workflow.
+- **Tested on:** macOS by hand with Python 3.9 (the version macOS ships) and 3.12, from a clean copy with and without an API key. Windows, macOS and Linux automatically through the fresh-install workflow.
 
 ---
 
@@ -282,7 +282,7 @@ tools/fake_firefly.py a stand-in for Adobe's servers, for testing Firefly with n
 tools/test_firefly.py the Firefly adapter's tests (offline)
 tools/fake_azure.py   a stand-in for Azure Blob Storage; tools/test_azure.py, its tests (offline)
 tools/                smoke_test.py (fresh-install test used by CI), screenshots.py (retakes the README screenshots), sample-asset scripts, a contact-sheet helper
-.github/workflows/    fresh-install.yml: the fresh-install test (Windows and Linux; macOS once public)
+.github/workflows/    fresh-install.yml: the fresh-install test (Windows, macOS and Linux)
 ```
 
 **Changing the interface** needs Node 18 or newer:
