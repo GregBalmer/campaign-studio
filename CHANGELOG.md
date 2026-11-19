@@ -14,6 +14,7 @@
 - **Adobe red, kept to the brand.** The app mark keeps its red tile, and a thin red line runs along the bottom of the window, always in view.
 - **The main button never moves.** On every step it sits in a grey panel at the top of the right-hand column, with what's done so far. The bar along the bottom of the screen is gone.
 - **Delete a campaign.** In the campaign menu, every campaign except the sample has a delete button that asks once before removing the campaign and its ads.
+- **Double-click to start.** `Start Campaign Studio.command` (Mac) and `Start Campaign Studio.bat` (Windows) run `start.py`, so nobody has to open a terminal. `start.py --check` sets up and checks without starting; CI runs each launcher with it.
 - **Every command sets itself up.** `cli.py`, the Firefly tests and the stand-in server now set up and use the app's private Python environment the way `start.py` does, so they run with plain `python3` on a fresh computer.
 - **README screenshots retaken** for the new look. `python3 tools/screenshots.py` retakes them at 1440×900 with the app running.
 - **Works on a phone.** The bar, steps, headings and the Key visual and Message steps fit a 375px-wide screen.

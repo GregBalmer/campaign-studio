@@ -2,12 +2,12 @@
 
 The video has one job: show a reviewer they can run this themselves, then show what it does. Record at 1440×900, the browser full-screen, no cuts during setup.
 
-**Before recording:** in the app, click the campaign name and choose **Start the sample over**. Have an OpenAI key ready in the app (**Models** shows **OpenAI**). Clear the terminal.
+**Before recording:** in the app, click the campaign name and choose **Start the sample over**. Have an OpenAI key ready in the app (**Models** shows **OpenAI**). Download a fresh **Code → Download ZIP** from GitHub and unzip it, so the Mac's first-time warning appears on camera: it's the one step a reviewer will get stuck on. Have the folder open in Finder, and close any Campaign Studio window that's already running.
 
 | Time | Screen | Say |
 |---|---|---|
 | 0:00 | README on GitHub | "This is Campaign Studio. One brief in, every social ad out, in every size and market, with a person approving the decisions that matter." |
-| 0:12 | Terminal | Type `python3 start.py`. "That's the whole setup. One command. It installs what it needs the first time and opens the browser." |
+| 0:12 | Finder | Double-click **Start Campaign Studio**. The Mac warns it can't verify the file: click **Done**, then **System Settings → Privacy & Security → Open Anyway**. "The first time, the Mac asks you to OK it, once, because it isn't from the App Store. Then that's the whole setup: download, double-click. It installs what it needs and opens the browser. The window that opens is the app running on this computer." |
 | 0:22 | Brief | "It opens on a sample: two products, two markets, one message. One product has a photo, so we'll reuse it. The other doesn't, so we'll generate it. The panel on the right says what we'll get: twelve ads." |
 | 0:40 | Click **Create key visuals** | "Nothing gets resized or translated yet. First, one key visual per product, for a person to approve." |
 | 0:50 | Key visual: photo | "This is the client's photo. I fit the box around the product; every size is cropped around it. The outlines show where the Story and Banner crops land, and the previews update live." Approve. |

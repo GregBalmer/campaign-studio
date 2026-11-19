@@ -1,5 +1,5 @@
 # Proves a reviewer can run Campaign Studio from a fresh copy on Windows, macOS
-# and Linux: one command, no API key. Each run uploads a screenshot of the app
+# and Linux: one command or a double-click, no API key. Each run uploads a screenshot of the app
 # as it renders on that machine, plus an ad that machine rendered.
 name: Fresh install
 
@@ -27,6 +27,15 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install and run, as a reviewer would
         run: python tools/smoke_test.py --screenshot app-${{ matrix.os }}-py${{ matrix.python }}.png
+      - name: The double-click launcher works (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: call "Start Campaign Studio.bat" --check
+      - name: The double-click launcher works (Mac and Linux)
+        if: runner.os != 'Windows'
+        run: |
+          test -x "Start Campaign Studio.command" || { echo "The launcher lost its execute permission."; exit 1; }
+          "./Start Campaign Studio.command" --check
       - uses: actions/upload-artifact@v4
         if: always()
         with:
@@ -54,6 +63,15 @@ jobs:
           python-version: ${{ matrix.python }}
       - name: Install and run, as a reviewer would
         run: python tools/smoke_test.py --screenshot app-${{ matrix.os }}-py${{ matrix.python }}.png
+      - name: The double-click launcher works (Windows)
+        if: runner.os == 'Windows'
+        shell: cmd
+        run: call "Start Campaign Studio.bat" --check
+      - name: The double-click launcher works (Mac and Linux)
+        if: runner.os != 'Windows'
+        run: |
+          test -x "Start Campaign Studio.command" || { echo "The launcher lost its execute permission."; exit 1; }
+          "./Start Campaign Studio.command" --check
       - uses: actions/upload-artifact@v4
         if: always()
         with:

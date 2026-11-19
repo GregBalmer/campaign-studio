@@ -21,22 +21,19 @@ You need **Python 3.9 or newer**. Macs already have it. On Windows, install it f
 
 **1. Get the code**
 
-```bash
-git clone <this repository's URL> campaign-studio
-cd campaign-studio
-```
+On GitHub, click **Code → Download ZIP** and unzip it. (Or `git clone` it.)
 
-(Or use **Code → Download ZIP** on GitHub, unzip it, and open a terminal in that folder.)
+**2. Double-click Start Campaign Studio**
 
-**2. Start it**
+In the unzipped folder, double-click **Start Campaign Studio**. On a Mac it's the `.command` file; on Windows, the `.bat` file. A window opens, the first run takes about 30 seconds while it sets itself up, and your browser opens on a ready-made sample campaign. After that it starts instantly.
 
-```bash
-python3 start.py
-```
+Keep that window open while you use the app; closing it stops the app. Your work is saved, and you can pick up where you left off.
 
-On Windows, use `py start.py`.
+> **The first time, your computer will warn you**, because the launcher isn't from an App Store or a signed installer. You only do this once:
+> - **Mac:** it says Apple could not verify the file. Click **Done**, open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to "Start Campaign Studio". (If you used `git clone`, there's no warning.)
+> - **Windows:** if it says **Windows protected your PC**, click **More info**, then **Run anyway**.
 
-The first run takes about 30 seconds while it sets itself up; after that it starts instantly. Your browser opens on a ready-made sample campaign. Press **Ctrl+C** in the terminal to stop it. Your work is saved, and you can pick up where you left off.
+Prefer a terminal? In the folder, run `python3 start.py` (on Windows, `py start.py`). It does exactly the same thing.
 
 **3. Sign in**
 
@@ -61,11 +58,11 @@ In production, sign-in comes from the client's single sign-on (Adobe, Okta or Mi
 
 Click **Create key visuals** and follow the steps. With no API key it runs in **Demo mode**: images are drawn locally, instantly and for free, so you can try the whole flow. When you want real images, click **Models** at the top, paste an OpenAI API key, and you're done. The key is checked and saved on your computer only.
 
-> **If something goes wrong**, the terminal says what to do in plain words. The most common one: the Mac asks to install "command line developer tools" the first time you type `python3`. Say yes, then run `python3 start.py` again.
+> **If something goes wrong**, the window says what to do in plain words. The most common one: the Mac asks to install "command line developer tools" the first time Python is used. Say yes, then start it again.
 
 **Windows, Mac or Linux.** A GitHub workflow ([`fresh-install.yml`](.github/workflows/fresh-install.yml)) installs and runs Campaign Studio from a fresh copy on all three, on every push, with no API key. It walks the whole flow, checks the download, and saves a screenshot of the app as it renders on each machine.
 
-**Want it in its own window?** In Chrome or Edge, click the install icon in the address bar (or **⋮ → Install Campaign Studio**). You get an app window and a dock or taskbar icon. It still needs `start.py` running, the same as the browser tab.
+**Want it in its own window?** In Chrome or Edge, click the install icon in the address bar (or **⋮ → Install Campaign Studio**). You get an app window and a dock or taskbar icon. It still needs the Start Campaign Studio window running, the same as the browser tab.
 
 ---
 
@@ -229,6 +226,7 @@ Both are offline and need no key, so they run on every push. This proves the ada
 ## For developers
 
 ```
+Start Campaign Studio double-click launchers (.command for Mac, .bat for Windows); they run start.py
 start.py              one-command launcher: sets up .venv, starts the server, opens the browser
 cli.py                the same pipeline without the UI
 studio/

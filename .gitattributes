@@ -1,0 +1,3 @@
+# The double-click launchers need their own platform's line endings.
+*.bat text eol=crlf
+*.command text eol=lf

@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """Start Campaign Studio.
 
-    python3 start.py
+    python3 start.py              # or double-click "Start Campaign Studio"
+    python3 start.py --check      # set up and check, without starting
 
 The first run sets up a private Python environment in .venv and installs the one
 dependency (Pillow). Every run then starts the app and opens your browser.
@@ -109,6 +110,10 @@ def main() -> None:
 
     config.load_env()
     pipeline.ensure_samples()
+    if "--check" in sys.argv:
+        # Used by the double-click launchers' tests: set up, prove the app loads, then stop.
+        say("Campaign Studio is set up and ready. Run it again without --check to start it.")
+        return
     port = free_port(int(os.environ.get("STUDIO_PORT", "8765")))
     url = f"http://127.0.0.1:{port}"
     server = make_server(port)
