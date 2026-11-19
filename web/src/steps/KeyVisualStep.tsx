@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Camera, Check, ChevronRight, Loader2, RefreshCw, Sparkles, Undo2 } from "lucide-react";
+import { Camera, Check, ChevronRight, Loader2, RefreshCw, Sparkles, Undo2 } from "lucide-react";
 import { api, masterUrl, type Check as CheckT, type View } from "../api";
-import { Button, ErrorNote, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
+import { Button, ErrorNote, NextPanel, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function KeyVisualStep() {
   const { view, run, busy, reviewer, goTo, errors } = useApp();
@@ -54,27 +54,33 @@ export default function KeyVisualStep() {
         </div>
       </div>
 
-      <div className="product-tabs" role="tablist">
-        {products.map((p) => {
-          const s = view.products[p.id] ?? {};
-          const url = masterUrl(view, p.id);
-          return (
-            <button key={p.id} role="tab" aria-selected={p.id === pid} className={`product-tab ${p.id === pid ? "active" : ""}`} onClick={() => setPid(p.id)}>
-              {url ? <img src={`${url}?v=${s.attempt ?? 0}&w=96`} alt="" /> : <span className="thumb" />}
-              {p.name || "Untitled product"}
-              {busy.has(`master-${p.id}`) ? <StatusBadge status="neutral">Creating…</StatusBadge>
-                : errors[`master-${p.id}`] ? <StatusBadge status="fail">Didn't work</StatusBadge>
-                : s.approved ? <StatusBadge status="pass"><Check size={12} strokeWidth={3} /> Approved</StatusBadge>
-                : s.master ? <StatusBadge status="warn">Needs approval</StatusBadge> : null}
-            </button>
-          );
-        })}
-      </div>
+      {/* Same two columns as every step, so the next-step panel sits in the same place. */}
+      <div className="grid-2">
+        <div>
+        <div className="product-tabs" role="tablist">
+          {products.map((p) => {
+            const s = view.products[p.id] ?? {};
+            const url = masterUrl(view, p.id);
+            return (
+              <button key={p.id} role="tab" aria-selected={p.id === pid} className={`product-tab ${p.id === pid ? "active" : ""}`} onClick={() => setPid(p.id)}>
+                {url ? <img src={`${url}?v=${s.attempt ?? 0}&w=96`} alt="" /> : <span className="thumb" />}
+                {p.name || "Untitled product"}
+                {busy.has(`master-${p.id}`) ? <StatusBadge status="neutral">Creating…</StatusBadge>
+                  : errors[`master-${p.id}`] ? <StatusBadge status="fail">Didn't work</StatusBadge>
+                  : s.approved ? <StatusBadge status="pass"><Check size={12} strokeWidth={3} /> Approved</StatusBadge>
+                  : s.master ? <StatusBadge status="warn">Needs approval</StatusBadge> : null}
+              </button>
+            );
+          })}
+        </div>
+          <FocalStage view={view} pid={product.id} generating={generating} onCreate={make} />
+        </div>
 
-      <div className="grid-2" style={{ gridTemplateColumns: "minmax(0, 1fr) 400px" }}>
-        <FocalStage view={view} pid={product.id} generating={generating} onCreate={make} />
-
-        <aside className="sticky">
+        <aside className="sticky stack">
+          <NextPanel label="Key visuals" figure={`${approvedCount} of ${products.length} approved`}
+            detail={allApproved ? "Every product has its key visual." : "Approve one for each product to continue."}>
+            <Button kind="primary" size="lg" className="btn-block" disabled={!allApproved} onClick={toMessage}>Continue to the message</Button>
+          </NextPanel>
           <section className="card card-pad">
             <h3 className="card-title">{product.name}</h3>
             <p className="card-hint" style={{ marginBottom: 16 }}>{generatedBy || "No key visual yet."}</p>
@@ -126,12 +132,6 @@ export default function KeyVisualStep() {
         </aside>
       </div>
 
-      <div className="footer-bar">
-        <div className="footer-inner">
-          <span className="msg"><b>{approvedCount} of {products.length}</b> key visuals approved{!allApproved && ". Approve each one to continue."}</span>
-          <Button kind="primary" disabled={!allApproved} icon={<ArrowRight size={17} />} onClick={toMessage}>Continue to the message</Button>
-        </div>
-      </div>
     </>
   );
 }

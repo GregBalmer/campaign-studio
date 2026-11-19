@@ -173,6 +173,7 @@ export const api = {
   createCampaign: (name: string) => call<View>("POST", "campaigns", { name }),
   get: (id: string) => call<View>("GET", `campaigns/${id}`),
   reset: (id: string) => call<View>("POST", `campaigns/${id}/reset`),
+  deleteCampaign: (id: string) => call<CampaignSummary[]>("DELETE", `campaigns/${id}`),
   patchBrief: (id: string, patch: Partial<Brief>) => call<View>("PATCH", `campaigns/${id}/brief`, patch),
   setProvider: (id: string, kind: ProviderKind, provider: string) =>
     call<View>("POST", `campaigns/${id}/provider`, { kind, provider }),

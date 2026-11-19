@@ -7,7 +7,14 @@
 - **Connect Firefly in the app.** Paste the client ID and secret under Models; they're checked with Adobe's sign-in and saved to `.env`. Firefly is never picked automatically.
 - **Nothing is called Firefly unless Adobe made it.** Pointed at the stand-in server, the app records images as `firefly-test` in the history and `report.json`, and the Models panel says it's pointing at a test server.
 - **`report.json` records who translated each line,** next to who made each image.
-- **A two-layer header.** A dark bar holds the app: its name, Models, History and your account. A light strip below holds the campaign: its name and its numbers (products, markets, ads, approved). The four steps sit under it.
+- **A thinner header, and New campaign moved into it.** A dark bar runs across the top: the app on the left; New campaign, Models, History and your account on the right. Starting a campaign lives there, away from the campaign you're working on. Below it, on the page colour, sit the campaign's name (click it to switch) and its numbers, then the four steps.
+- **White means you can use it.** Forms, steps, buttons and menus sit on white; summaries, numbers and empty states sit on the page colour.
+- **Blue for "do this".** Main buttons and chosen options are blue instead of black. Black is only ever text.
+- **Steps look clickable.** Every step has the same thin outline that fills on hover; the current step is white, and a step you can't reach yet is faded. Step numbers are plain numerals; a finished step shows a green check. Red is no longer used for the current step, where it read as an error.
+- **Adobe red, kept to the brand.** The app mark keeps its red tile, and a thin red line runs along the bottom of the window, always in view.
+- **The main button never moves.** On every step it sits in a grey panel at the top of the right-hand column, with what's done so far. The bar along the bottom of the screen is gone.
+- **Delete a campaign.** In the campaign menu, every campaign except the sample has a delete button that asks once before removing the campaign and its ads.
+- **Works on a phone.** The bar, steps, headings and the Key visual and Message steps fit a 375px-wide screen.
 
 ## After v2
 

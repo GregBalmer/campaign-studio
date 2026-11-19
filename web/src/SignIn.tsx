@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { ArrowRight } from "lucide-react";
 import { api, ApiError, type DemoAccount, type Person } from "./api";
 import { Button } from "./ui";
 import { AppMark } from "./App";
@@ -50,7 +49,7 @@ export default function SignIn({ demo, onSignedIn }: { demo: DemoAccount[]; onSi
           </div>
           {error && <div className="field-note fail" role="alert">{error}</div>}
           <Button kind="primary" size="lg" className="btn-block" type="submit" busy={busy} autoFocus={demo.length > 0}
-            disabled={!email || !password} icon={<ArrowRight size={17} />}>Sign in</Button>
+            disabled={!email || !password}>Sign in</Button>
         </form>
 
         {demo.length > 0 && (

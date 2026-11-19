@@ -168,6 +168,21 @@ export function FormatGlyph({ ratio, h = 26 }: { ratio: string; h?: number }) {
 }
 
 /** A failure that stays put, next to the thing that failed, until it's retried or dismissed. */
+/** The next-step panel: top of the right-hand column on every step, so the main
+ *  button is always in the same place. */
+export function NextPanel({ label, figure, detail, children }: {
+  label: string; figure: ReactNode; detail?: ReactNode; children: ReactNode;
+}) {
+  return (
+    <section className="summary-panel">
+      <div className="summary-label">{label}</div>
+      <div className="summary-figure">{figure}</div>
+      {detail && <div className="summary-detail">{detail}</div>}
+      {children}
+    </section>
+  );
+}
+
 export function ErrorNote({ k, action = "Try again" }: { k: string; action?: string }) {
   const { errors, retry, dismissError, busy } = useApp();
   const msg = errors[k];

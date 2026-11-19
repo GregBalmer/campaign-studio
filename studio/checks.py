@@ -69,7 +69,7 @@ def run(layout: dict, text: str, lang: str, brief: dict) -> list[dict]:
         add("readable", "Message is easy to read", PASS, f"Strong contrast: {ratio:.1f} to 1, above the 4.5 minimum.")
     elif ratio >= 3:
         add("readable", "Message is easy to read", WARN,
-            f"Contrast is {ratio:.1f} to 1, a little under the 4.5 minimum. Check the brand's main colour behind the text.",
+            f"Contrast is {ratio:.1f} to 1, a little under the 4.5 minimum. Check the brand's main color behind the text.",
             layout["text_box"])
     else:
         add("readable", "Message is easy to read", FAIL,
@@ -118,10 +118,10 @@ def run(layout: dict, text: str, lang: str, brief: dict) -> list[dict]:
     near = sum(1 for p in px if min(sum(abs(p[i] - c[i]) for i in range(3)) for c in palette) < 70)
     share = near / len(px)
     if share >= 0.08:
-        add("colours", "Brand colours are used", PASS, f"{share:.0%} of the ad uses brand colours.")
+        add("colours", "Brand colors are used", PASS, f"{share:.0%} of the ad uses brand colors.")
     else:
-        add("colours", "Brand colours are used", WARN,
-            f"Only {share:.0%} of the ad uses brand colours. It may feel off-brand.")
+        add("colours", "Brand colors are used", WARN,
+            f"Only {share:.0%} of the ad uses brand colors. It may feel off-brand.")
 
     # 5. Words allowed by legal.
     hits = banned_hits(text, lang, brief)

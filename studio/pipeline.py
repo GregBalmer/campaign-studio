@@ -69,6 +69,16 @@ def reset_sample(cid: str) -> None:
         shutil.copytree(src, config.WORKSPACE / cid)
 
 
+def delete_campaign(cid: str) -> None:
+    """Remove a campaign someone made, and its finished ads. Samples can only be started over."""
+    if (config.SAMPLES / cid).exists():
+        raise StudioError("The sample can't be deleted. Start it over instead.")
+    with _lock:
+        c = Campaign(cid)  # checks the id and that the campaign exists
+        shutil.rmtree(c.dir, ignore_errors=True)
+        shutil.rmtree(config.OUTPUTS / cid, ignore_errors=True)
+
+
 def list_campaigns() -> list[dict]:
     ensure_samples()
     out = []
@@ -263,7 +273,7 @@ class Campaign:
             f"Hero product: {p['name']}. {p.get('description', '')} "
             f"Mood and setting: {b.get('mood', '')} "
             f"Audience: {b.get('audience', '')} "
-            f"Let the palette lean toward the brand colours {c['primary']} and {c['accent']} without forcing them. "
+            f"Let the palette lean toward the brand colors {c['primary']} and {c['accent']} without forcing them. "
             "Composition: a wide shot. The product is the clear hero, sharp and fully in frame, standing "
             "near the centre and a little below the middle, but small in the frame: no more than a quarter "
             "of the image height. Lots of calm, uncluttered space above and around it so the picture can be "
@@ -568,7 +578,7 @@ def with_campaign(cid: str, fn):
 
 
 __all__ = ["Campaign", "StudioError", "ProviderError", "list_campaigns", "create_campaign",
-           "reset_sample", "ensure_samples", "with_campaign", "generate_master", "translate_all"]
+           "reset_sample", "delete_campaign", "ensure_samples", "with_campaign", "generate_master", "translate_all"]
 
 
 # ------------------------------------------------------------ slow steps

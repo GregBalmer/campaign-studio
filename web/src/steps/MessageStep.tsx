@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
-import { ArrowRight, Check, Languages, Pencil } from "lucide-react";
+import { Check, Languages, Pencil } from "lucide-react";
 import { api, LANGUAGE_NAMES, restrictedHits, type Check as CheckT } from "../api";
-import { Button, CheckIconDot, ErrorNote, Markers, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
+import { Button, CheckIconDot, NextPanel, ErrorNote, Markers, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function MessageStep() {
   const { view, run, busy, reviewer, goTo } = useApp();
@@ -24,8 +24,10 @@ export default function MessageStep() {
         </div>
       </div>
 
+      <div className="grid-2">
+      <div>
       {missing && (
-        <div className="card card-pad empty" style={{ padding: 40 }}>
+        <div className="empty">
           <ErrorNote k="translate" />
           {translating ? (
             <><Languages size={26} /><p style={{ margin: "12px 0 0" }}><b>Translating…</b> adapting the line for each market, not just swapping words.</p></>
@@ -39,12 +41,14 @@ export default function MessageStep() {
       )}
 
       {!missing && langs.map((lang) => <LanguageCard key={lang} lang={lang} />)}
+      </div>
 
-      <div className="footer-bar">
-        <div className="footer-inner">
-          <span className="msg"><b>{approved} of {langs.length}</b> languages approved{all ? `. Ready to build ${ads} ads.` : "."}</span>
-          <Button kind="primary" disabled={!all} icon={<ArrowRight size={17} />} onClick={build}>Build all {ads} ads</Button>
-        </div>
+      <aside className="sticky">
+        <NextPanel label="Languages" figure={`${approved} of ${langs.length} approved`}
+          detail={all ? `Ready to build ${ads} ads.` : "Approve every language to build the ads."}>
+          <Button kind="primary" size="lg" className="btn-block" disabled={!all} onClick={build}>Build all {ads} ads</Button>
+        </NextPanel>
+      </aside>
       </div>
     </>
   );
@@ -155,7 +159,7 @@ function LanguageCard({ lang }: { lang: string }) {
         </div>
 
         <div>
-          <div className="row" style={{ justifyContent: "space-between", marginBottom: 10 }}>
+          <div className="row" style={{ justifyContent: "space-between", flexWrap: "wrap", gap: 8, marginBottom: 10 }}>
             <div className="seg">
               {view.brief.products.map((p) => (
                 <button key={p.id} className={p.id === product ? "on" : ""} onClick={() => setProduct(p.id)} title={p.name}>

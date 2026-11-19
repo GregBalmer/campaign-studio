@@ -194,6 +194,9 @@ class Handler(BaseHTTPRequestHandler):
             return self._json((c or Campaign(cid)).view())
 
         if not rest:
+            if method == "DELETE":
+                pipeline.delete_campaign(cid)
+                return self._json(pipeline.list_campaigns())
             pipeline.ensure_samples()
             return view()
         head = rest[0]

@@ -51,7 +51,7 @@ export default function ReviewStep() {
 
   if (building && entries.length === 0) {
     return (
-      <div className="card empty" style={{ marginTop: 40 }}>
+      <div className="empty" style={{ marginTop: 40 }}>
         <Loader2 size={28} className="spin" />
         <h2 style={{ margin: "14px 0 6px", color: "var(--ink)" }}>Building {view.brief.products.length * 3 * view.brief.markets.length} ads…</h2>
         <p style={{ margin: 0 }}>Cropping each key visual, setting the message in every language and running the checks.</p>

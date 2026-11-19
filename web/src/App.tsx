@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { Check, ChevronDown, LogOut, Plus, RotateCcw, X } from "lucide-react";
+import { Check, ChevronDown, LogOut, Plus, RotateCcw, Trash2, X } from "lucide-react";
 import { api, ApiError, LANGUAGE_NAMES, NEW_MARKETS, setSignedOutHandler, type CampaignSummary, type DemoAccount, type Person, type ProviderLists, type View } from "./api";
 import { AppCtx, Button, Drawer, clock, useDismiss, type Ctx } from "./ui";
 import SignIn from "./SignIn";
@@ -45,8 +45,10 @@ export default function App() {
   const [panel, setPanel] = useState<"settings" | "history" | "campaigns" | "new-campaign" | "account" | null>(null);
   const toastTimer = useRef<number>();
   const switcher = useRef<HTMLDivElement>(null);
+  const creator = useRef<HTMLDivElement>(null);
   const account = useRef<HTMLDivElement>(null);
-  useDismiss(switcher, panel === "campaigns" || panel === "new-campaign", () => setPanel(null));
+  useDismiss(switcher, panel === "campaigns", () => setPanel(null));
+  useDismiss(creator, panel === "new-campaign", () => setPanel(null));
   useDismiss(account, panel === "account", () => setPanel(null));
 
   useEffect(() => {
@@ -88,6 +90,14 @@ export default function App() {
       }
     })();
   }, [open, me]);
+
+  // On a narrow screen the steps scroll sideways; keep the current one in view.
+  const stepper = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const nav = stepper.current;
+    const cur = nav?.querySelector<HTMLElement>(".step.current");
+    if (nav && cur && nav.scrollWidth > nav.clientWidth) nav.scrollLeft = cur.offsetLeft - nav.offsetLeft - 16;
+  }, [step, view?.id]);
 
   const loaded = view !== null;
   useEffect(() => {
@@ -199,7 +209,7 @@ export default function App() {
 
   return (
     <AppCtx.Provider value={ctx}>
-      {/* Two layers: a dark bar for the app, and a light strip for the campaign being worked on. */}
+      {/* The app's bar runs edge to edge, a little below the top; the campaign and its steps sit on the page below. */}
       <header className="topbar">
         <div className="topbar-left">
           <span className="wordmark-mark"><AppMark /></span>
@@ -207,6 +217,19 @@ export default function App() {
         </div>
         <div className="spacer" />
         <div className="topbar-right">
+          {/* Starting a campaign is an app action, so it lives here, away from the campaign you're working on. */}
+          <div className="campaign-slot new-campaign-slot" ref={creator}>
+            <button className="bar-link bar-action" aria-expanded={panel === "new-campaign"} aria-label="New campaign"
+              onClick={() => setPanel(panel === "new-campaign" ? null : "new-campaign")}>
+              <Plus size={14} strokeWidth={2.25} /><span className="bar-action-label">New campaign</span>
+            </button>
+            {panel === "new-campaign" && (
+              <NewCampaignForm onCreate={async (name) => {
+                setPanel(null);
+                await run("new", async () => { const v = await api.createCampaign(name); await refreshCampaigns(); setStep(0); return v; });
+              }} />
+            )}
+          </div>
           <button className="bar-link" onClick={() => setPanel("settings")} title="Which services make the images and translate the message">Models</button>
           <button className="bar-link" onClick={() => setPanel("history")} title="Who did what">History</button>
           <div className="campaign-slot" ref={account}>
@@ -232,33 +255,38 @@ export default function App() {
         <div className="camphead-inner">
           <div className="camphead-row">
             <div className="camphead-title">
+              <div className="camp-label">Campaign</div>
               <div className="campaign-slot" ref={switcher}>
                 <button className="campaign-switch" aria-expanded={panel === "campaigns"} aria-label="Switch campaign"
                   onClick={() => setPanel(panel === "campaigns" ? null : "campaigns")}>
                   <span className="campaign-name">{view.brief.campaign || "Untitled campaign"}</span>
                   {view.sample && <span className="badge">Sample</span>}
-                  <ChevronDown size={18} className="campaign-chevron" />
+                  {/* The name is the control; the round white button says so. */}
+                  <span className="campaign-chevron"><ChevronDown size={16} strokeWidth={2.25} /></span>
                 </button>
-                <button className="new-campaign" aria-expanded={panel === "new-campaign"}
-                  onClick={() => setPanel(panel === "new-campaign" ? null : "new-campaign")}>
-                  <Plus size={15} /> New campaign
-                </button>
-                {(panel === "campaigns" || panel === "new-campaign") && (
+                {panel === "campaigns" && (
                   <CampaignMenu
-                    naming={panel === "new-campaign"}
                     campaigns={campaigns}
                     current={view.id}
                     sample={view.sample}
                     onPick={async (id) => { setPanel(null); await run("open", async () => { await open(id); }); }}
-                    onNew={async (name) => {
-                      setPanel(null);
-                      await run("new", async () => { const v = await api.createCampaign(name); await refreshCampaigns(); setStep(0); return v; });
-                    }}
                     onReset={async () => {
                       setPanel(null);
                       await run("reset", async () => { const v = await api.reset(view.id); setStep(0); toast("Sample reset to the start."); return v; });
                     }}
-                    onClose={() => setPanel(null)}
+                    onDelete={async (c) => {
+                      setPanel(null);
+                      await run("delete", async () => {
+                        const list = await api.deleteCampaign(c.id);
+                        setCampaigns(list);
+                        // Deleting the campaign you're in takes you to the sample.
+                        if (c.id === view.id) {
+                          const next = list.find((x) => x.sample)?.id ?? list[0]?.id;
+                          if (next) { setStep(0); await open(next, false); }
+                        }
+                        toast(`Deleted “${c.name}”.`);
+                      });
+                    }}
                   />
                 )}
               </div>
@@ -277,7 +305,7 @@ export default function App() {
       </div>
 
       {/* One flow, four steps: each says what you do there. */}
-      <nav className="stepper" aria-label="Steps">
+      <nav className="stepper" aria-label="Steps" ref={stepper}>
         {STEPS.map((s, i) => (
           <button
             key={s.title}
@@ -331,13 +359,14 @@ export default function App() {
 const initials = (name: string) =>
   name.split(/\s+/).filter(Boolean).slice(0, 2).map((w) => w[0]!.toUpperCase()).join("") || "?";
 
-/** One frame becoming many sizes. Deliberately unlike any client brand mark. */
-export function AppMark({ size = 16 }: { size?: number }) {
+/** One frame becoming many sizes. Deliberately unlike any client brand mark.
+ *  Drawn in currentColor, so its tile sets the colour. */
+export function AppMark({ size = 25 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <rect x="3" y="10" width="15" height="15" rx="3" fill="#fff" opacity="0.55" />
-      <rect x="14" y="5" width="10" height="18" rx="3" fill="#fff" opacity="0.8" />
-      <rect x="9" y="17" width="20" height="11" rx="3" fill="#fff" />
+      <rect x="3" y="10" width="15" height="15" rx="3" fill="currentColor" opacity="0.55" />
+      <rect x="14" y="5" width="10" height="18" rx="3" fill="currentColor" opacity="0.8" />
+      <rect x="9" y="17" width="20" height="11" rx="3" fill="currentColor" />
     </svg>
   );
 }
@@ -381,28 +410,45 @@ function humanDetail(view: View, event: string, detail: string): string {
   return detail;
 }
 
-function CampaignMenu({ naming, campaigns, current, sample, onPick, onNew, onReset, onClose }: {
-  naming: boolean; campaigns: CampaignSummary[]; current: string; sample: boolean;
-  onPick: (id: string) => void; onNew: (name: string) => void; onReset: () => void; onClose: () => void;
-}) {
+/** "New campaign" asks for a name and nothing else. */
+function NewCampaignForm({ onCreate }: { onCreate: (name: string) => void }) {
   const [name, setName] = useState("");
-  void onClose;
-  // "New campaign" asks for a name and nothing else.
-  if (naming) {
-    return (
-      <form className="menu row" style={{ minWidth: 320, padding: 10 }} onSubmit={(e) => { e.preventDefault(); if (name.trim()) onNew(name.trim()); }}>
-        <input className="input" autoFocus aria-label="Campaign name" placeholder="Name the new campaign" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: "8px 10px", fontSize: 14 }} />
-        <Button kind="primary" size="sm" type="submit" disabled={!name.trim()}>Create</Button>
-      </form>
-    );
-  }
   return (
-    <div className="menu" style={{ minWidth: 280 }}>
-      {campaigns.map((c) => (
-        <button key={c.id} className="menu-item" onClick={() => onPick(c.id)}>
-          <span>{c.name}{c.sample && <span className="muted"> · sample</span>}</span>
-          {c.id === current && <Check size={16} />}
-        </button>
+    <form className="menu row new-campaign-form" onSubmit={(e) => { e.preventDefault(); if (name.trim()) onCreate(name.trim()); }}>
+      <input className="input" autoFocus aria-label="Campaign name" placeholder="Name the new campaign" value={name} onChange={(e) => setName(e.target.value)} style={{ padding: "8px 10px", fontSize: 14 }} />
+      <Button kind="primary" size="sm" type="submit" disabled={!name.trim()}>Create</Button>
+    </form>
+  );
+}
+
+function CampaignMenu({ campaigns, current, sample, onPick, onReset, onDelete }: {
+  campaigns: CampaignSummary[]; current: string; sample: boolean;
+  onPick: (id: string) => void; onReset: () => void; onDelete: (c: CampaignSummary) => void;
+}) {
+  // Deleting asks once, in place: the row turns into the question.
+  const [confirming, setConfirming] = useState<string | null>(null);
+  return (
+    <div className="menu" style={{ minWidth: 300 }}>
+      {campaigns.map((c) => confirming === c.id ? (
+        <div key={c.id} className="menu-confirm">
+          <span>Delete “{c.name}” and its ads? This can't be undone.</span>
+          <span className="row" style={{ gap: 6 }}>
+            <Button size="sm" kind="ghost" onClick={() => setConfirming(null)}>Keep it</Button>
+            <Button size="sm" kind="danger" autoFocus onClick={() => onDelete(c)}>Delete</Button>
+          </span>
+        </div>
+      ) : (
+        <div key={c.id} className="menu-row">
+          <button className="menu-item" onClick={() => onPick(c.id)}>
+            <span>{c.name}{c.sample && <span className="muted"> · sample</span>}</span>
+            {c.id === current && <Check size={16} />}
+          </button>
+          {!c.sample && (
+            <button className="menu-row-delete" aria-label={`Delete ${c.name}`} title="Delete this campaign" onClick={() => setConfirming(c.id)}>
+              <Trash2 size={15} />
+            </button>
+          )}
+        </div>
       ))}
       {sample && <div style={{ borderTop: "1px solid var(--line)", margin: "6px 0" }} />}
       {sample && (

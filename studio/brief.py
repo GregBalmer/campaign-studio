@@ -65,7 +65,7 @@ def validate(brief: dict) -> None:
     need(bool(brand.get("name")), "Add the brand name.")
     colors = brand.get("colors") or {}
     for key in ("primary", "accent"):
-        need(bool(HEX.match(str(colors.get(key, "")))), f"Brand colour '{key}' must look like #1A2B3C.")
+        need(bool(HEX.match(str(colors.get(key, "")))), f"Brand color '{key}' must look like #1A2B3C.")
 
     if problems:
         raise BriefError(problems)

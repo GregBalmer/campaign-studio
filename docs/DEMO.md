@@ -2,7 +2,7 @@
 
 The video has one job: show a reviewer they can run this themselves, then show what it does. Record at 1440×900, the browser full-screen, no cuts during setup.
 
-**Before recording:** in the app, open the campaign menu and choose **Start the sample over**. Have an OpenAI key ready in the app (**Models** shows **OpenAI**). Clear the terminal.
+**Before recording:** in the app, click the campaign name and choose **Start the sample over**. Have an OpenAI key ready in the app (**Models** shows **OpenAI**). Clear the terminal.
 
 | Time | Screen | Say |
 |---|---|---|

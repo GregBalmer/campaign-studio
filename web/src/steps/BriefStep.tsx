@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
-import { ArrowRight, Check, ChevronRight, Copy, ImagePlus, Mail, MessageSquare, Plus, Sparkles, Trash2, X } from "lucide-react";
+import { Check, ChevronRight, Copy, ImagePlus, Mail, MessageSquare, Plus, Sparkles, Trash2, X } from "lucide-react";
 import { api, LANGUAGE_NAMES, MARKET_PRESETS, NEW_MARKETS, photoUrl, restrictedHits, type Brief, type Market, type NewMarket, type Product } from "../api";
-import { Button, FormatGlyph, Modal, timeAgo, useApp, useDebounced, useDismiss, ErrorNote } from "../ui";
+import { Button, FormatGlyph, Modal, NextPanel, timeAgo, useApp, useDebounced, useDismiss, ErrorNote } from "../ui";
 
 export default function BriefStep() {
   const { view, setView, run, busy, goTo, reviewer, toast } = useApp();
@@ -71,7 +71,7 @@ export default function BriefStep() {
 
       <div className="grid-2">
         <div>
-          <section className="card card-pad">
+          <section className="card card-pad form-card">
             <div className="field">
               <label className="label" htmlFor="campaign">Campaign name</label>
               <input id="campaign" className="input" value={draft.campaign} onChange={(e) => set("campaign", e.target.value)} />
@@ -99,7 +99,7 @@ export default function BriefStep() {
             </div>
           </section>
 
-          <section className="card card-pad">
+          <section className="card card-pad form-card">
             <h3 className="card-title">Markets</h3>
             <p className="card-hint">Each market gets every ad in its own language. You'll check each translation before anything is made.</p>
             <div className="row-wrap">
@@ -119,11 +119,21 @@ export default function BriefStep() {
             </div>
           </section>
 
-          <section className="card card-pad">
+          <section className="card card-pad form-card">
             <h3 className="card-title">Products</h3>
             <p className="card-hint">Have a product photo? Drop it in and we'll use it. No photo? Leave it empty and we'll create one from the description.</p>
             {draft.products.map((p, i) => (
               <div className="product-card" key={p.id}>
+                {/* The label heads the whole product: its photo and its words. */}
+                <div className="product-card-head">
+                  <label className="label" htmlFor={`pn-${p.id}`}>Product {i + 1}</label>
+                  {draft.products.length > 2 && (
+                    <button className="btn btn-ghost btn-sm" style={{ height: 22, padding: "0 6px" }}
+                      onClick={() => set("products", draft.products.filter((x) => x.id !== p.id))}>
+                      <Trash2 size={13} /> Remove
+                    </button>
+                  )}
+                </div>
                 <PhotoDrop
                   url={photoUrl(view, p)}
                   busy={busy.has(`upload-${p.id}`)}
@@ -133,22 +143,13 @@ export default function BriefStep() {
                 <div>
                   <ErrorNote k={`upload-${p.id}`} action="Choose another file" />
                   <div className="field">
-                    <label className="label" htmlFor={`pn-${p.id}`}>
-                      Product {i + 1}
-                      {draft.products.length > 2 && (
-                        <button className="btn btn-ghost btn-sm" style={{ height: 22, padding: "0 6px" }}
-                          onClick={() => set("products", draft.products.filter((x) => x.id !== p.id))}>
-                          <Trash2 size={13} /> Remove
-                        </button>
-                      )}
-                    </label>
                     <input id={`pn-${p.id}`} className="input" placeholder="Product name" value={p.name} onChange={(e) => setProduct(i, { name: e.target.value })} />
                   </div>
                   <div className="field" style={{ marginTop: 10 }}>
                     <textarea
                       className="textarea"
                       rows={2}
-                      placeholder="What does it look like? Colour, shape, packaging."
+                      placeholder="What does it look like? Color, shape, packaging."
                       value={p.description ?? ""}
                       onChange={(e) => setProduct(i, { description: e.target.value })}
                     />
@@ -164,37 +165,34 @@ export default function BriefStep() {
             )}
           </section>
 
-          <section className="card card-pad">
+          <section className="card card-pad form-card">
             <h3 className="card-title">Look and feel</h3>
-            <p className="card-hint">Guides any image we create. Brand colours and logo come from the {draft.brand.name} brand kit.</p>
+            <p className="card-hint">Guides any image we create. Brand colors and logo come from the {draft.brand.name} brand kit.</p>
             <div className="field">
               <label className="label" htmlFor="mood">Mood</label>
               <textarea id="mood" className="textarea" rows={2} value={draft.mood ?? ""} onChange={(e) => set("mood", e.target.value)}
                 placeholder="Light, setting, feeling. For example: golden-hour beach, relaxed and premium." />
             </div>
-            <div className="row" style={{ marginTop: 18, gap: 24, flexWrap: "wrap" }}>
-              <div>
-                <div className="label" style={{ marginBottom: 8 }}>Brand colours</div>
-                <div className="row">
-                  {Object.entries(draft.brand.colors).map(([k, c]) => (
-                    <span key={k} className="swatch" style={{ background: c }} title={`${k} ${c}`} />
-                  ))}
-                </div>
+            {/* From the brand kit, so read-only. Each sits under its label, like the fields above. */}
+            <div className="field">
+              <span className="label">Brand colors</span>
+              <div className="row">
+                {Object.entries(draft.brand.colors).map(([k, c]) => (
+                  <span key={k} className="swatch" style={{ background: c }} title={`${k} ${c}`} />
+                ))}
               </div>
-              {draft.brand.logo && (
-                <div>
-                  <div className="label" style={{ marginBottom: 8 }}>Logo</div>
-                  <div className="logo-box"><img src={`/files/workspace/${view.id}/${draft.brand.logo}`} alt={`${draft.brand.name} logo`} /></div>
-                </div>
-              )}
             </div>
+            {draft.brand.logo && (
+              <div className="field">
+                <span className="label">Logo</span>
+                <div><div className="logo-box"><img src={`/files/workspace/${view.id}/${draft.brand.logo}`} alt={`${draft.brand.name} logo`} /></div></div>
+              </div>
+            )}
           </section>
         </div>
 
         <aside className="sticky">
-          <section className="card card-pad">
-            <div className="muted small" style={{ fontWeight: 600, marginBottom: 8 }}>What you'll get</div>
-            <div className="summary-figure">{ads} ads</div>
+          <NextPanel label="What you'll get" figure={`${ads} ads`}>
             <div className="equation">
               <b>{draft.products.length}</b> products × <b>3</b> sizes × <b>{draft.markets.length}</b> {draft.markets.length === 1 ? "market" : "markets"}
             </div>
@@ -204,7 +202,7 @@ export default function BriefStep() {
               ))}
             </div>
             <div className="muted small" style={{ marginBottom: 18, lineHeight: 1.5 }}>
-              In {langs.map((l) => LANGUAGE_NAMES[l]).join(" and ")}. Every ad is checked for logo, brand colours, legibility and restricted words.
+              In {langs.map((l) => LANGUAGE_NAMES[l]).join(" and ")}. Every ad is checked for logo, brand colors, legibility and restricted words.
             </div>
             {view.problems.length > 0 && (
               <div className="problems">
@@ -213,10 +211,10 @@ export default function BriefStep() {
               </div>
             )}
             <Button kind="primary" size="lg" className="btn-block" disabled={!ready} onClick={begin}
-              icon={started ? <ArrowRight size={18} /> : <Sparkles size={18} />}>
+              icon={started ? undefined : <Sparkles size={18} />}>
               {started ? "Continue to key visuals" : "Create key visuals"}
             </Button>
-          </section>
+          </NextPanel>
         </aside>
       </div>
     </>
