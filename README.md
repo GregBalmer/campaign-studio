@@ -23,17 +23,23 @@ You need **Python 3.9 or newer**. Macs already have it. On Windows, install it f
 
 On GitHub, click **Code → Download ZIP** and unzip it. (Or `git clone` it.)
 
-**2. Double-click Start Campaign Studio**
+**2. Start it**
 
-In the unzipped folder, double-click **Start Campaign Studio**. On a Mac it's the `.command` file; on Windows, the `.bat` file. A window opens, the first run takes about 30 seconds while it sets itself up, and your browser opens on a ready-made sample campaign. After that it starts instantly.
+In the unzipped folder, run:
+
+```bash
+python3 start.py
+```
+
+On Windows, `py start.py`. The first run takes about 30 seconds while it sets itself up, then your browser opens on a ready-made sample campaign. After that it starts instantly.
 
 Keep that window open while you use the app; closing it stops the app. Your work is saved, and you can pick up where you left off.
 
-> **The first time, your computer will warn you**, because the launcher isn't from an App Store or a signed installer. You only do this once:
+**No terminal?** Double-click **Start Campaign Studio** in the same folder instead: the `.command` file on a Mac, the `.bat` file on Windows. It does exactly the same thing.
+
+> **The first time, your computer will warn you about the launcher**, because it isn't from an App Store or a signed installer. You only do this once:
 > - **Mac:** it says Apple could not verify the file. Click **Done**, open **System Settings → Privacy & Security**, scroll down, and click **Open Anyway** next to "Start Campaign Studio". (If you used `git clone`, there's no warning.)
 > - **Windows:** if it says **Windows protected your PC**, click **More info**, then **Run anyway**.
-
-Prefer a terminal? In the folder, run `python3 start.py` (on Windows, `py start.py`). It does exactly the same thing.
 
 **3. Sign in**
 
@@ -56,11 +62,11 @@ In production, sign-in comes from the client's single sign-on (Adobe, Okta or Mi
 
 **4. Try it**
 
-Click **Create key visuals** and follow the steps. With no API key it runs in **Demo mode**: images are drawn locally, instantly and for free, so you can try the whole flow. When you want real images, click **Models** at the top, paste an OpenAI API key, and you're done. The key is checked and saved on your computer only.
+Click **Create key visuals** and follow the steps. To try your own brief, click **New campaign** at the top: start a blank one, or duplicate the current one and change it. **Restart demo** puts the sample back to how it shipped. With no API key it runs in **Demo mode**: images are drawn locally, instantly and for free, so you can try the whole flow. When you want real images, click **Models** at the top, paste an OpenAI API key, and you're done. The key is checked and saved on your computer only.
 
 > **If something goes wrong**, the window says what to do in plain words. The most common one: the Mac asks to install "command line developer tools" the first time Python is used. Say yes, then start it again.
 
-**Windows, Mac or Linux.** A GitHub workflow ([`fresh-install.yml`](.github/workflows/fresh-install.yml)) installs and runs Campaign Studio from a fresh copy on all three, on every push, with no API key. It walks the whole flow, checks the download, and saves a screenshot of the app as it renders on each machine.
+**Windows, Mac or Linux.** On every push, a GitHub workflow ([`fresh-install.yml`](.github/workflows/fresh-install.yml)) installs and runs Campaign Studio from a fresh copy on Windows (Python 3.9 and 3.12) and Linux, with no API key, including the double-click launcher. It walks the whole flow, checks the download, and saves a screenshot of the app as it renders on each machine. GitHub's macOS machines aren't available to this private repository, so the Mac is tested by hand; the macOS job switches on if the repository is made public. [`tools/screenshots.py`](tools/screenshots.py) retakes the screenshots below from the running app.
 
 **Want it in its own window?** In Chrome or Edge, click the install icon in the address bar (or **⋮ → Install Campaign Studio**). You get an app window and a dock or taskbar icon. It still needs the Start Campaign Studio window running, the same as the browser tab.
 
@@ -72,8 +78,8 @@ Click **Create key visuals** and follow the steps. With no API key it runs in **
 |---|---|
 | ![Brief](docs/screens/1-brief.jpg) | **Brief.** Campaign name, message, audience, markets and products, all on one page that saves as you type. The right-hand panel shows what you'll get (here, 2 products × 3 sizes × 2 markets = 12 ads), and the button stays locked until the brief is complete. Restricted words are flagged as you type. |
 | ![Key visual](docs/screens/2-key-visual.jpg) | **Key visual.** One image per product. Fit the **product box** around the product: every size is cropped around it, and the message is kept off it. Outlines show exactly where the Story and Banner crops land, and the previews on the right update as you move the box. Approve, or try another. |
-| ![Message](docs/screens/3-message.jpg) | **Message.** The source line and each translation, side by side with a live ad preview. The translation is adapted for the market, not swapped word for word, and **What it says** shows its meaning in English so a reviewer who doesn't read Japanese can still sign off. Editing re-renders instantly and costs nothing: the words sit on top of the image, not inside it. |
-| ![Review](docs/screens/4-review.jpg) | **Review and export.** Every ad, grouped by product and market. Problems are boxed and numbered on the ad itself. Click any ad for a close-up with the full check list and a one-click route to fix the cause. Approve one at a time (keys: **A**, **R**, **← →**) or **Approve all that pass**, then download a ZIP of the approved ads. |
+| ![Message](docs/screens/3-message.jpg) | **Message.** One card per language, with every product's ad beside it. The translation is adapted for the market, not swapped word for word. **In English** shows what it says, and **Changed the meaning** flags a line whose meaning has shifted, so a reviewer who doesn't read Japanese can still sign off, or **Ask for a change**. The words sit on top of the image, so editing re-renders instantly and costs nothing. Every language puts the message card in the same place on each ad, so the markets stay consistent. |
+| ![Review](docs/screens/4-review.jpg) | **Review and export.** Every ad, grouped by product and market. Problems are boxed and numbered on the ad itself. Click any ad for a close-up with the full check list and a one-click route to fix the cause. Approve one at a time (keys: **A**, **R**, **← →**) or **Approve all that pass**, then download a ZIP of the approved ads, or **Show folder** to open them on disk. |
 
 ---
 
@@ -216,10 +222,11 @@ Both are offline and need no key, so they run on every push. This proves the ada
 - **Restricted words are a simple list per language.** It's a stand-in for a real legal-review service, not a replacement.
 - **Fonts:** Inter (Latin) and Noto Sans JP (Japanese) are bundled under the SIL Open Font Licence, so output is identical on any machine. Other scripts are added per market (see *Launching in a new market*).
 - **Branding:** Adobe red is the app's single accent, used in the interface chrome only, never on or around the ads. No Adobe logos are used, so nothing implies Adobe made or endorses this proof of concept.
+- **Ads are saved as lossless PNG,** about 1.6 to 2.4 MB each at full size. A JPEG at quality 85 is about 200 KB, with no visible difference at phone size. It's a small change in the save step; it isn't made here because the ad platforms compress what's uploaded anyway.
 - **Demo images are illustrations,** drawn locally to make the flow free to try. The report labels them `mock`.
 - **The sample's "client-supplied" product photo** (`samples/long-light/assets/daylight-mist.png`) was itself generated with OpenAI for this demo. Solvane is a fictional brand.
 - **Performance insights** (CTR and conversions by variant, goal 5 in the brief) aren't covered. `report.json` gives each ad a stable identity, which is what a later analytics join would use.
-- **Tested on:** macOS by hand with Python 3.9 (the version macOS ships) and 3.12, from a clean copy with and without an API key. Windows, Linux and macOS automatically through the fresh-install workflow.
+- **Tested on:** macOS by hand with Python 3.9 (the version macOS ships) and 3.12, from a clean copy with and without an API key. Windows and Linux automatically through the fresh-install workflow.
 
 ---
 
@@ -245,7 +252,7 @@ tools/team.py         add, list or remove the people who can sign in
 tools/fake_firefly.py a stand-in for Adobe's servers, for testing Firefly with no account
 tools/test_firefly.py the Firefly adapter's tests (offline)
 tools/                smoke_test.py (fresh-install test used by CI), screenshots.py (retakes the README screenshots), sample-asset scripts, a contact-sheet helper
-.github/workflows/    fresh-install.yml: the Windows / macOS / Linux test
+.github/workflows/    fresh-install.yml: the fresh-install test (Windows and Linux; macOS once public)
 ```
 
 **Changing the interface** needs Node 18 or newer:

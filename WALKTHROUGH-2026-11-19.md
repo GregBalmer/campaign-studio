@@ -42,19 +42,20 @@ From the late-night handoff:
 - [x] `CAMPAIGN` label above vs number labels below: dropped the CAMPAIGN label (C)
 - [x] Restart demo: sample only, small modal (Cancel / Restart), lands on the Brief
 - [x] New campaign: dropdown with Blank campaign / Duplicate, then one popup (Cancel / Create); no name asked. Duplicate copies brief and photos only
+- [x] README screenshots: retaken 19 Nov, sample restarted after
 - [ ] Tag `v3` (only when Greg says)
 
 From the walkthrough:
-- [ ] `docs/DEMO.md`: open with the app already running (drop the Finder and Gatekeeper beat)
-- [ ] `docs/DEMO.md`: drop the install-as-an-app beat at 2:55
-- [ ] README: `python3 start.py` first, launchers as the no-terminal option
-- [ ] README: one line on CI and the screenshot tool, accurate about which systems run in CI
+- [x] `docs/DEMO.md`: open with the app already running (drop the Finder and Gatekeeper beat)
+- [x] `docs/DEMO.md`: drop the install-as-an-app beat at 2:55
+- [x] README: `python3 start.py` first, launchers as the no-terminal option
+- [x] README: one line on CI and the screenshot tool, accurate about which systems run in CI
 - [x] Models panel: a line under each group, icons and dark headings, no subtitle
-- [ ] `docs/DEMO.md`: Models beat, one sentence (~10s)
-- [ ] README: one line that the app takes any brief (New campaign, or `cli.py` with a `brief.json`)
+- [x] `docs/DEMO.md`: Models beat, one sentence (~10s)
+- [x] README: one line that the app takes any brief (New campaign, or `cli.py` with a `brief.json`)
 - [x] Test Show folder on Mac: works, Finder opens `outputs/<campaign>/`
-- [ ] `docs/DEMO.md`: click Show folder in the 2:20 beat
-- [ ] README: one sentence on the shared card position across languages
+- [x] `docs/DEMO.md`: click Show folder in the 2:20 beat
+- [x] README: one sentence on the shared card position across languages
 
 From the look-only pass (each needs Greg's call; A/B before any visual change):
 - [x] History: times only ("7:15 PM"), no day, while the lightbox says "14 h ago"; yesterday's entries read as today's
@@ -62,8 +63,8 @@ From the look-only pass (each needs Greg's call; A/B before any visual change):
 - [x] Models: "For production" badge now neutral grey
 - [x] Models: explainer done (line per group)
 - [x] Sign-in: subtitle leaves "time." alone on its own line
-- [ ] README step descriptions are stale after the redesign: Message still says "What it says" and "side by side with a live ad preview"
-- [ ] README: one line on file size. Ads are lossless PNG, 1.6 to 2.4 MB each; JPEG at quality 85 is about 200 KB (8 to 10× smaller). Not building it, just saying it was considered
+- [x] README step descriptions are stale after the redesign: Message still says "What it says" and "side by side with a live ad preview"
+- [x] README: one line on file size. Ads are lossless PNG, 1.6 to 2.4 MB each; JPEG at quality 85 is about 200 KB (8 to 10× smaller). Not building it, just saying it was considered
 
 Checked, no change needed:
 - Sign-in page, Models connect forms (OpenAI and Firefly), History layout, lightbox checks list
