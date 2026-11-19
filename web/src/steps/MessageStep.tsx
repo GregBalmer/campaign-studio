@@ -172,7 +172,13 @@ function LanguageCard({ lang, format }: { lang: string; format: string }) {
             aria-label={`${LANGUAGE_NAMES[lang]} message`}
           />
         )}
-        {hits.length > 0 && <div className="field-note fail" style={{ marginTop: 6 }}>Legal restricts “{hits.join("”, “")}” in {LANGUAGE_NAMES[lang]}.</div>}
+        {/* Undo sits right under the line being edited, not below the ads. */}
+        {(hits.length > 0 || dirty) && (
+          <div className="edit-row">
+            {hits.length > 0 ? <span className="field-note fail">Legal restricts “{hits.join("”, “")}” in {LANGUAGE_NAMES[lang]}.</span> : <span />}
+            {dirty && <Button kind="secondary" size="sm" onMouseDown={(e) => e.preventDefault()} onClick={() => { setText(entry.text); setTyping(false); }}>Undo changes</Button>}
+          </div>
+        )}
         {!isSource && entry.back_translation && !dirty && (
           <div className="meaning"><span className="muted">In English:</span> {entry.back_translation}</div>
         )}
@@ -216,7 +222,6 @@ function LanguageCard({ lang, format }: { lang: string; format: string }) {
               busy={busy.has(`approve-copy-${lang}`) || busy.has(`copy-${lang}`)} disabled={!text.trim() || hits.length > 0}>
               Approve {LANGUAGE_NAMES[lang]}
             </Button>
-            {dirty && <Button kind="ghost" onMouseDown={(e) => e.preventDefault()} onClick={() => { setText(entry.text); setTyping(false); }}>Undo changes</Button>}
             {/* One way to change a translated line: ask in English. Typing it yourself is inside. */}
             {!isSource && !dirty && !asking && !typing && (
               <Button kind="ghost" icon={<MessageSquareText size={15} />} onClick={() => (canRewrite ? setAsking(true) : setTyping(true))}>

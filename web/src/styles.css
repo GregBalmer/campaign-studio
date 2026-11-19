@@ -321,6 +321,8 @@ a.btn { text-decoration: none; }
 .summary-label { font-size: 13px; font-weight: 600; color: var(--ink-3); margin-bottom: 8px; }
 .summary-figure { font-size: 32px; font-weight: 650; letter-spacing: -0.025em; line-height: 1.1; }
 .summary-detail { font-size: 14px; color: var(--ink-2); line-height: 1.5; margin: 12px 0 18px; }
+/* With no detail line, the same space between the figure and the first button. */
+.summary-figure + :not(.summary-detail) { margin-top: 22px; }
 .equation { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; color: var(--ink-2); font-size: 14px; margin: 12px 0 18px; }
 .equation b { color: var(--ink); font-weight: 650; }
 .format-icons { display: grid; grid-template-columns: repeat(3, 1fr); align-items: end; gap: 10px; margin: 6px 0 20px; }
@@ -716,7 +718,7 @@ body::after { content: ""; position: fixed; z-index: 90; left: 0; right: 0; bott
 button.connect-link { border: 0; background: none; padding: 0; cursor: pointer; }
 button.connect-link:hover { text-decoration: underline; }
 .summary-panel .btn-block + .btn-block { margin-top: 10px; }
-.sent-line { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 0; font-size: 13.5px; font-weight: 550; color: var(--ok); }
+.sent-line { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 14px 0 2px; font-size: 13.5px; font-weight: 550; color: var(--ok); }
 
 /* Loading on the Message step: a working line, then cards that shimmer until the words and ads arrive. */
 .working-line { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); font-size: 14px; }
@@ -729,3 +731,5 @@ button.connect-link:hover { text-decoration: underline; }
 
 /* Links in the app read as links by colour, not underline. */
 a { text-decoration: none; }
+.edit-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 8px; }
+.edit-row .field-note { margin: 0; }
