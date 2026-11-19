@@ -4,12 +4,20 @@ import { api, masterUrl, type Check as CheckT, type View } from "../api";
 import { Button, ErrorNote, NextPanel, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function KeyVisualStep() {
-  const { view, goTo } = useApp();
+  const { view, goTo, run, busy, reviewer, errors } = useApp();
   const products = view.brief.products;
   const approvedCount = products.filter((p) => view.products[p.id]?.approved).length;
   const allApproved = approvedCount === products.length;
 
-  // The Message step translates whatever's missing as soon as it opens.
+  // The translation needs only the message, not the images, so it starts here in the
+  // background while the key visuals are reviewed. The Message step is then ready on arrival.
+  const missingCopy = view.languages.some((l) => !view.copy[l]);
+  useEffect(() => {
+    if (missingCopy && view.brief.message?.trim() && !busy.has("translate") && !errors["translate"]) {
+      reviewer().then((by) => run("translate", () => api.translate(view.id, by)));
+    }
+  }, [missingCopy, view.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const toMessage = () => goTo(2);
 
   return (
