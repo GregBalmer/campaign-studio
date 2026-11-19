@@ -325,7 +325,8 @@ a.btn { text-decoration: none; }
 .stage {
   position: relative; border-radius: var(--radius); overflow: hidden; background: #e9e5de;
   aspect-ratio: 1 / 1; user-select: none; touch-action: none;
-  width: min(100%, calc(100vh - 470px)); min-width: 320px;
+  /* Sized to the window: 500px at 900px tall. */
+  width: min(100%, calc(100vh - 400px)); min-width: 320px;
 }
 .stage img.loading { opacity: 0; }
 .stage img { transition: opacity 0.2s; }
