@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronRight, Copy, ImagePlus, Mail, MessageSquare, Plus, Sparkles, Trash2, X } from "lucide-react";
-import { api, LANGUAGE_NAMES, MARKET_PRESETS, NEW_MARKETS, photoUrl, restrictedHits, type Brief, type Market, type NewMarket, type Product } from "../api";
+import { api, ApiError, LANGUAGE_NAMES, MARKET_PRESETS, NEW_MARKETS, photoUrl, restrictedHits, type Brief, type Market, type NewMarket, type Product } from "../api";
 import { Button, FormatGlyph, Modal, NextPanel, timeAgo, useApp, useDebounced, useDismiss, ErrorNote } from "../ui";
 
 export default function BriefStep() {
@@ -24,6 +24,19 @@ export default function BriefStep() {
     api.patchBrief(view.id, { campaign, message, audience, mood, markets, products }).then(setView).catch(() =>
       toast("Couldn't save the last change. Check the app is still running.", "error"));
   }, [debounced]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // After a suggestion fills a field, what was there before, so it can be put back.
+  const [audienceUndo, setAudienceUndo] = useState<{ before: string; demo: boolean } | null>(null);
+  const [descUndo, setDescUndo] = useState<Record<string, string>>({});
+  const canRead = view.providers.text === "openai";
+  // Suggestions return words, not a new campaign, so they don't go through run().
+  const [working, setWorking] = useState<string | null>(null);
+  const ask = async <T,>(key: string, fn: () => Promise<T>): Promise<T | null> => {
+    setWorking(key);
+    try { return await fn(); }
+    catch (e) { toast(e instanceof ApiError ? e.message : "Something went wrong. Try again.", "error"); return null; }
+    finally { setWorking(null); }
+  };
 
   const set = <K extends keyof Brief>(k: K, v: Brief[K]) => setDraft((d) => ({ ...d, [k]: v }));
   const setProduct = (i: number, patch: Partial<Product>) =>
@@ -77,25 +90,42 @@ export default function BriefStep() {
               <input id="campaign" className="input" value={draft.campaign} onChange={(e) => set("campaign", e.target.value)} />
             </div>
             <div className="field">
-              <label className="label" htmlFor="message">
-                Message <span className="muted">Shown on every ad · {draft.message.length} characters</span>
-              </label>
+              <label className="label" htmlFor="message">Message</label>
               <input
                 id="message"
-                className={`input big ${hits.length ? "invalid" : ""}`}
+                className={`input ${hits.length ? "invalid" : ""}`}
                 value={draft.message}
                 placeholder="One short line, in English"
                 onChange={(e) => set("message", e.target.value)}
               />
-              {hits.length > 0 ? (
-                <span className="field-note fail">Legal restricts “{hits.join("”, “")}”. Change the wording.</span>
-              ) : (
-                <span className="field-note">Short lines read best on a phone. Under 40 characters is ideal.</span>
-              )}
+              {/* One note under the field: what it's for on the left, the count on the right. */}
+              <span className={`field-note split ${hits.length ? "fail" : ""}`}>
+                <span>{hits.length > 0 ? <>Legal restricts “{hits.join("”, “")}”. Change the wording.</> : "Shown on every ad. Under 40 characters reads best on a phone."}</span>
+                <span className={`count ${draft.message.length > 40 ? "over" : ""}`}>{draft.message.length} / 40</span>
+              </span>
             </div>
             <div className="field">
-              <label className="label" htmlFor="audience">Who it's for</label>
-              <textarea id="audience" className="textarea" rows={2} value={draft.audience} onChange={(e) => set("audience", e.target.value)} />
+              <span className="label-row">
+                <label className="label" htmlFor="audience">Who it's for</label>
+                <Button kind="ghost" size="sm" className="label-action" icon={<Sparkles size={14} />} busy={working === "suggest-audience"}
+                  onClick={async () => {
+                    const before = draft.audience;
+                    const r = await ask("suggest-audience", () => api.suggestAudience(view.id, { message: draft.message, products: draft.products, markets: draft.markets }));
+                    if (r) { set("audience", r.text); setAudienceUndo({ before, demo: r.demo }); }
+                  }}>
+                  Suggest
+                </Button>
+              </span>
+              <textarea id="audience" className="textarea" rows={2} value={draft.audience} placeholder="Who should stop scrolling? Age, what they do, why this product fits."
+                onChange={(e) => { set("audience", e.target.value); setAudienceUndo(null); }} />
+              {audienceUndo && (
+                <span className="field-note">
+                  {audienceUndo.demo ? "A demo suggestion. Connect OpenAI under Models for one written for this brief. " : "Suggested from your products and message. Edit it to fit. "}
+                  {audienceUndo.before && audienceUndo.before !== draft.audience && (
+                    <button className="link" onClick={() => { set("audience", audienceUndo.before); setAudienceUndo(null); }}>Put back what I had</button>
+                  )}
+                </span>
+              )}
             </div>
           </section>
 
@@ -151,8 +181,28 @@ export default function BriefStep() {
                       rows={2}
                       placeholder="What does it look like? Color, shape, packaging."
                       value={p.description ?? ""}
-                      onChange={(e) => setProduct(i, { description: e.target.value })}
+                      onChange={(e) => { setProduct(i, { description: e.target.value }); setDescUndo(({ [p.id]: _, ...rest }) => rest); }}
                     />
+                    {/* Reading a photo needs a model that can see, so it shows only with OpenAI. */}
+                    {photoUrl(view, p) && canRead && (
+                      <span className="field-note split">
+                        <span>
+                          {p.id in descUndo && descUndo[p.id] !== (p.description ?? "") && (
+                            descUndo[p.id]
+                              ? <button className="link" onClick={() => { setProduct(i, { description: descUndo[p.id] }); setDescUndo(({ [p.id]: _, ...rest }) => rest); }}>Put back what I had</button>
+                              : "Read from your photo. Check it's right."
+                          )}
+                        </span>
+                        <Button kind="ghost" size="sm" className="label-action" icon={<Sparkles size={14} />} busy={working === `describe-${p.id}`}
+                          onClick={async () => {
+                            const before = p.description ?? "";
+                            const r = await ask(`describe-${p.id}`, () => api.describePhoto(view.id, p.id, p.name));
+                            if (r) { setProduct(i, { description: r.text }); setDescUndo((u) => ({ ...u, [p.id]: before })); }
+                          }}>
+                          Describe from photo
+                        </Button>
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -224,32 +274,58 @@ export default function BriefStep() {
 function AddMarket({ existing, onAdd }: { existing: Market[]; onAdd: (m: Market) => void }) {
   const { view } = useApp();
   const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState("");
   const [setup, setSetup] = useState<NewMarket | null>(null);
   const ref = useRef<HTMLSpanElement>(null);
   useDismiss(ref, open, () => setOpen(false));
-  const options = MARKET_PRESETS.filter((m) => !existing.some((e) => e.region === m.region));
+  const q = query.trim().toLowerCase();
+  const matches = (m: Market) => !q || m.name.toLowerCase().includes(q) || LANGUAGE_NAMES[m.language]?.toLowerCase().includes(q);
+  const ready = MARKET_PRESETS.filter((m) => !existing.some((e) => e.region === m.region) && matches(m));
+  const needsSetup = NEW_MARKETS.filter(matches);
+  // A country that isn't listed at all can still be asked for, by name.
+  const known = [...MARKET_PRESETS, ...NEW_MARKETS].some((m) => m.name.toLowerCase() === q);
+  const other: NewMarket | null = q.length > 1 && !known ? {
+    region: query.trim().toUpperCase().replace(/[^A-Z]/g, "").slice(0, 8) || "OTHER",
+    name: query.trim().replace(/^./, (c) => c.toUpperCase()), language: "", languageName: "", script: "", font: "",
+  } : null;
+  const close = () => { setOpen(false); setQuery(""); };
   return (
     <span className="add-market" ref={ref}>
-      <Button kind="ghost" icon={<Plus size={16} />} onClick={() => setOpen(!open)} style={{ height: 38 }}
+      <Button kind="ghost" icon={<Plus size={16} />} onClick={() => (open ? close() : setOpen(true))} style={{ height: 38 }}
         aria-expanded={open} aria-haspopup="menu">Add market</Button>
       {open && (
-        <div className="menu" role="menu">
-          {options.length > 0 && <div className="menu-heading">Ready to use</div>}
-          {options.map((m) => (
-            <button key={m.region} role="menuitem" className="menu-item" onClick={() => { onAdd(m); setOpen(false); }}>
+        <div className="menu market-menu" role="menu">
+          <input className="input market-search" autoFocus placeholder="Find a country" aria-label="Find a country"
+            value={query} onChange={(e) => setQuery(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              if (ready[0]) { onAdd(ready[0]); close(); }
+              else if (needsSetup[0] || other) { setSetup(needsSetup[0] ?? other); close(); }
+            }} />
+          {ready.length > 0 && <div className="menu-heading">Ready to use</div>}
+          {ready.map((m) => (
+            <button key={m.region} role="menuitem" className="menu-item" onClick={() => { onAdd(m); close(); }}>
               {m.name} <span className="muted">{LANGUAGE_NAMES[m.language]}</span>
             </button>
           ))}
-          <div className="menu-heading">New to {view.brief.brand.name}</div>
-          {NEW_MARKETS.map((m) => {
+          {(needsSetup.length > 0 || other) && (
+            <div className="menu-heading">Needs setup first <span className="muted">· new for {view.brief.brand.name}</span></div>
+          )}
+          {needsSetup.map((m) => {
             const req = view.market_requests?.[m.region];
             return (
-              <button key={m.region} role="menuitem" className="menu-item" onClick={() => { setSetup(m); setOpen(false); }}>
+              <button key={m.region} role="menuitem" className="menu-item" onClick={() => { setSetup(m); close(); }}>
                 {m.name}
                 {req ? <span className="badge ok">Requested</span> : <span className="badge">Request</span>}
               </button>
             );
           })}
+          {other && (
+            <button role="menuitem" className="menu-item" onClick={() => { setSetup(other); close(); }}>
+              <span>{other.name} <span className="muted">not on the list</span></span>
+              {view.market_requests?.[other.region] ? <span className="badge ok">Requested</span> : <span className="badge">Request</span>}
+            </button>
+          )}
         </div>
       )}
       {setup && <MarketRequest market={setup} onClose={() => setSetup(null)} />}
@@ -263,16 +339,19 @@ function MarketRequest({ market: m, onClose }: { market: NewMarket; onClose: () 
   const { view, run, busy, reviewer, toast, slack } = useApp();
   const brand = view.brief.brand.name;
   const sent = view.market_requests?.[m.region];
+  // A country picked from the list comes with its language; one typed in by name doesn't.
   const involved: [string, string][] = [
-    [`A ${m.languageName} typeface`, `${brand}'s fonts don't include ${m.script} yet. Your Adobe or IT team adds one once (${m.font} is free).`
-      + (m.rtl ? ` ${m.languageName} reads right to left, so the layout mirrors too.` : "")],
-    [`A ${m.languageName} reviewer`, `Someone on the local team who approves each translated message in Campaign Studio.`],
+    m.languageName
+      ? [`A ${m.languageName} typeface`, `${brand}'s fonts don't include ${m.script} yet. Your Adobe or IT team adds one once (${m.font} is free).`
+        + (m.rtl ? ` ${m.languageName} reads right to left, so the layout mirrors too.` : "")]
+      : ["The language and a typeface", `Which language the ads in ${m.name} should use, and a typeface for it if ${brand}'s fonts don't cover it.`],
+    [m.languageName ? `A ${m.languageName} reviewer` : "A local reviewer", `Someone on the local team who approves each translated message in Campaign Studio.`],
     ["Legal sign-off", `Restricted words, product claims, required disclaimers and any pre-approval rules for ${m.name}.`],
     ["Local assets, if needed", "Imagery, product names or a logo variant that fit the market."],
   ];
 
   const message = (by: string) =>
-    `Hi,\n\nWe'd like to run ${brand} campaigns in ${m.name} (${m.languageName}). `
+    `Hi,\n\nWe'd like to run ${brand} campaigns in ${m.name}${m.languageName ? ` (${m.languageName})` : ""}. `
     + `Campaign Studio needs a one-time setup first:\n\n`
     + involved.map(([t, d]) => `- ${t}: ${d}`).join("\n")
     + `\n\nCould you route this to the right people? Once it's in place, ${m.name} becomes a ready market for every campaign.`

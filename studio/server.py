@@ -202,7 +202,7 @@ class Handler(BaseHTTPRequestHandler):
         head = rest[0]
 
         if head == "reset" and method == "POST":
-            pipeline.reset_sample(cid)
+            pipeline.start_over(cid, by)
             return view()
 
         if head == "brief" and method == "PATCH":
@@ -220,8 +220,11 @@ class Handler(BaseHTTPRequestHandler):
         if head == "products" and len(rest) >= 3:
             pid, action = rest[1], rest[2]
             if action == "master" and method == "POST":
-                pipeline.generate_master(cid, pid, by)
+                pipeline.generate_master(cid, pid, by, b.get("prompt") if isinstance(b.get("prompt"), str) else None,
+                                         from_brief=bool(b.get("from_brief")))
                 return view()
+            if action == "describe" and method == "POST":
+                return self._json(pipeline.describe_photo(cid, pid, str(b.get("name", ""))[:120]))
             if action == "photo" and method == "DELETE":
                 return with_campaign(cid, lambda c: (c.remove_photo(pid), view(c))[1])
             if action == "source" and method == "POST":
@@ -234,6 +237,9 @@ class Handler(BaseHTTPRequestHandler):
             if action == "reopen" and method == "POST":
                 return with_campaign(cid, lambda c: (c.reopen_master(pid, by), view(c))[1])
 
+        if head == "suggest-audience" and method == "POST":
+            return self._json(pipeline.suggest_audience(cid, b))
+
         if head == "translate" and method == "POST":
             pipeline.translate_all(cid, by, force=bool(b.get("force")))
             return view()
@@ -242,6 +248,9 @@ class Handler(BaseHTTPRequestHandler):
             lang = rest[1]
             if len(rest) == 2 and method == "POST":
                 return with_campaign(cid, lambda c: (c.edit_copy(lang, b.get("text", ""), by), view(c))[1])
+            if len(rest) == 3 and rest[2] == "revise" and method == "POST":
+                pipeline.revise_translation(cid, lang, str(b.get("instruction", "")), by)
+                return view()
             if len(rest) == 3 and rest[2] == "approve" and method == "POST":
                 return with_campaign(cid, lambda c: (c.approve_copy(lang, by), view(c))[1])
             if len(rest) == 3 and rest[2] == "reopen" and method == "POST":
@@ -264,6 +273,21 @@ class Handler(BaseHTTPRequestHandler):
                 except NotifyError as e:
                     raise StudioError(str(e)) from None
             return with_campaign(cid, lambda c: (c.record_market_request(region, via, by), view(c))[1])
+
+        if head == "reveal" and method == "POST":
+            # Opens the finished ads in Finder or Explorer. The app only runs on this computer.
+            out = Campaign(cid).out_dir()
+            if not out.exists():
+                raise StudioError("There are no saved ads yet.")
+            import subprocess
+            import sys
+            if sys.platform == "darwin":
+                subprocess.Popen(["open", str(out)])
+            elif sys.platform.startswith("win"):
+                os.startfile(str(out))  # type: ignore[attr-defined]
+            else:
+                subprocess.Popen(["xdg-open", str(out)])
+            return self._json({"ok": True})
 
         if head == "fanout" and method == "POST":
             return with_campaign(cid, lambda c: (c.fan_out(by), view(c))[1])

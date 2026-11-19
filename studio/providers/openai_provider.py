@@ -106,10 +106,11 @@ class OpenAIProvider(ImageProvider, TextProvider):
             raise ProviderError("OpenAI answered without an image. Try again.") from None
         return Image.open(io.BytesIO(base64.b64decode(b64))).convert("RGB")
 
-    def translate(self, text: str, source: str, target: str, brief: dict) -> dict:
+    def translate(self, text: str, source: str, target: str, brief: dict,
+                  instruction: str = "", current: str = "") -> dict:
         from ..brief import LANGUAGE_NAMES
         if source == target:
-            return {"text": text, "back_translation": text, "note": ""}
+            return {"text": text, "back_translation": text, "note": "", "drift": ""}
         market = next((m for m in brief.get("markets", []) if m["language"] == target), {})
         instructions = (
             "You localise advertising headlines for social ads. "
@@ -120,14 +121,22 @@ class OpenAIProvider(ImageProvider, TextProvider):
             "Do not add claims the source doesn't make. "
             'Reply with JSON only: {"text": "<localised line>", '
             '"back_translation": "<plain English meaning of your line>", '
-            '"note": "<one short sentence, in English, on any adaptation choice, or empty>"}. '
-            "The back_translation and note are read by an English-speaking reviewer, so write both in English."
+            '"note": "<one short sentence, in English, on any adaptation choice, or empty>", '
+            '"drift": "<if your back_translation means something different from the source, one short line '
+            'saying what changed, e.g. Drops \'Made for\'; \'longest days\' becomes \'long summer days\'. '
+            'Empty if the meaning is the same.>"}. '
+            "The back_translation, note and drift are read by an English-speaking reviewer, so write them in English."
         )
+        ask = f"Translate from {LANGUAGE_NAMES.get(source, source)} to {LANGUAGE_NAMES.get(target, target)}:\n{text}"
+        if instruction:
+            # The reviewer reads only the source language, so their request is in it.
+            ask += (f"\n\nThe current translation is: {current}\n"
+                    f"The reviewer, who doesn't read {LANGUAGE_NAMES.get(target, target)}, asked for this change: "
+                    f"{instruction}\nWrite a new line that does what they asked, still natural and fluent.")
         data = _post("/responses", {
             "model": config.text_model(),
             "instructions": instructions,
-            "input": f"Translate from {LANGUAGE_NAMES.get(source, source)} to "
-                     f"{LANGUAGE_NAMES.get(target, target)}:\n{text}",
+            "input": ask,
         }, timeout=60)
         out = _output_text(data)
         try:
@@ -135,9 +144,48 @@ class OpenAIProvider(ImageProvider, TextProvider):
             parsed = json.loads(out[start:end])
             return {"text": str(parsed["text"]).strip(),
                     "back_translation": str(parsed.get("back_translation", "")).strip(),
-                    "note": str(parsed.get("note", "")).strip()}
+                    "note": str(parsed.get("note", "")).strip(),
+                    "drift": str(parsed.get("drift", "")).strip()}
         except (ValueError, KeyError):
             raise ProviderError("The translation came back in an unexpected shape. Try again.") from None
+
+    def suggest_audience(self, brief: dict) -> str:
+        products = "; ".join(f"{p.get('name', '')}: {p.get('description', '')}" for p in brief.get("products", []))
+        markets = ", ".join(m.get("name", m.get("region", "")) for m in brief.get("markets", []))
+        data = _post("/responses", {
+            "model": config.text_model(),
+            "instructions": (
+                "You help a junior designer fill in a social ad brief. Write the target audience in one sentence "
+                "of plain English, under 25 words: who they are (an age range), what they do, and why the product "
+                "fits them. No marketing jargon, no quotation marks. Reply with the sentence only."
+            ),
+            "input": f"Brand: {brief['brand']['name']}. Brand voice: {brief['brand'].get('voice', '')}\n"
+                     f"Products: {products}\nMessage: {brief.get('message', '')}\nMarkets: {markets}",
+        }, timeout=60)
+        return _one_line(_output_text(data))
+
+    def describe_photo(self, png: bytes, name: str, brief: dict) -> str:
+        data = _post("/responses", {
+            "model": config.text_model(),
+            "instructions": (
+                "Describe the product in this photo for an image generator that will draw it again. "
+                "One or two short sentences, under 30 words: the packaging type, colors, cap or closure, "
+                "and anything printed on it. Describe only the product, not the background. "
+                "Reply with the description only."
+            ),
+            "input": [{"role": "user", "content": [
+                {"type": "input_text", "text": f"The product is called {name or 'the product'}."},
+                {"type": "input_image", "image_url": "data:image/png;base64," + base64.b64encode(png).decode()},
+            ]}],
+        }, timeout=60)
+        return _one_line(_output_text(data))
+
+
+def _one_line(text: str) -> str:
+    text = " ".join(text.split()).strip().strip('"')
+    if not text:
+        raise ProviderError("OpenAI answered with nothing. Try again.")
+    return text
 
 
 def _output_text(data: dict) -> str:

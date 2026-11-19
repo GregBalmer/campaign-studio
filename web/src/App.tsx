@@ -256,6 +256,7 @@ export default function App() {
           <div className="camphead-row">
             <div className="camphead-title">
               <div className="camp-label">Campaign</div>
+              <div className="camphead-name-row">
               <div className="campaign-slot" ref={switcher}>
                 <button className="campaign-switch" aria-expanded={panel === "campaigns"} aria-label="Switch campaign"
                   onClick={() => setPanel(panel === "campaigns" ? null : "campaigns")}>
@@ -268,12 +269,7 @@ export default function App() {
                   <CampaignMenu
                     campaigns={campaigns}
                     current={view.id}
-                    sample={view.sample}
                     onPick={async (id) => { setPanel(null); await run("open", async () => { await open(id); }); }}
-                    onReset={async () => {
-                      setPanel(null);
-                      await run("reset", async () => { const v = await api.reset(view.id); setStep(0); toast("Sample reset to the start."); return v; });
-                    }}
                     onDelete={async (c) => {
                       setPanel(null);
                       await run("delete", async () => {
@@ -289,6 +285,16 @@ export default function App() {
                     }}
                   />
                 )}
+              </div>
+              {/* Back to step 1 without hunting through a menu. It asks once, in place. */}
+              <StartOver sample={view.sample} busy={busy.has("reset")} onConfirm={async () => {
+                await run("reset", async () => {
+                  const v = await api.reset(view.id, reviewerName);
+                  setStep(0);
+                  toast(view.sample ? "The sample is back at the start." : "Started over. Your brief is kept.");
+                  return v;
+                });
+              }} />
               </div>
             </div>
             <dl className="camp-stats">
@@ -381,11 +387,13 @@ function describe(event: string): string {
     "copy.edited": "edited the message:",
     "copy.approved": "approved the message:",
     "copy.reopened": "reopened the message:",
+    "copy.revised": "asked for a change to",
     "frames.rendered": "built",
     "frame.approved": "approved",
     "frame.rejected": "rejected",
     "frame.cleared": "cleared the decision on",
     "market.requested": "asked IT to set up",
+    "campaign.restarted": "started the campaign over",
   } as Record<string, string>)[event] ?? event;
 }
 
@@ -400,7 +408,11 @@ function humanDetail(view: View, event: string, detail: string): string {
     const size = view.formats[fmt]?.label ?? fmt;
     return `${product(pid)} · ${size} · ${market(region)}${note.length ? ` · “${note.join(": ")}”` : ""}`;
   }
-  if (event.startsWith("copy.")) return LANGUAGE_NAMES[detail] ?? detail;
+  if (event.startsWith("copy.")) {
+    // "ja", "ja via OpenAI" or "ja: Make it shorter"
+    const [, lang, sep, rest] = detail.match(/^([a-z]{2,3})(:? ?)(.*)$/) ?? [, detail, "", ""];
+    return `${LANGUAGE_NAMES[lang!] ?? lang}${rest ? `${sep === ": " ? ": “" : " "}${rest}${sep === ": " ? "”" : ""}` : ""}`;
+  }
   if (event === "frames.rendered") return detail.replace(/ new or changed frame\(s\)/, " ads, new or changed,");
   if (event === "market.requested") {
     const [region, , via] = detail.split(" ");
@@ -421,9 +433,9 @@ function NewCampaignForm({ onCreate }: { onCreate: (name: string) => void }) {
   );
 }
 
-function CampaignMenu({ campaigns, current, sample, onPick, onReset, onDelete }: {
-  campaigns: CampaignSummary[]; current: string; sample: boolean;
-  onPick: (id: string) => void; onReset: () => void; onDelete: (c: CampaignSummary) => void;
+function CampaignMenu({ campaigns, current, onPick, onDelete }: {
+  campaigns: CampaignSummary[]; current: string;
+  onPick: (id: string) => void; onDelete: (c: CampaignSummary) => void;
 }) {
   // Deleting asks once, in place: the row turns into the question.
   const [confirming, setConfirming] = useState<string | null>(null);
@@ -450,9 +462,25 @@ function CampaignMenu({ campaigns, current, sample, onPick, onReset, onDelete }:
           )}
         </div>
       ))}
-      {sample && <div style={{ borderTop: "1px solid var(--line)", margin: "6px 0" }} />}
-      {sample && (
-        <button className="menu-item" onClick={onReset}><span className="row"><RotateCcw size={15} /> Start the sample over</span></button>
+    </div>
+  );
+}
+
+/** Start over: one button beside the campaign name, which turns into the question. */
+function StartOver({ sample, busy, onConfirm }: { sample: boolean; busy: boolean; onConfirm: () => void }) {
+  const [asking, setAsking] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useDismiss(ref, asking, () => setAsking(false));
+  return (
+    <div className="start-over" ref={ref}>
+      {asking ? (
+        <span className="start-over-ask">
+          <span>{sample ? "Put the sample back to the start?" : "Clear the key visuals, translations and approvals? Your brief stays."}</span>
+          <Button size="sm" kind="ghost" onClick={() => setAsking(false)}>Keep working</Button>
+          <Button size="sm" kind="primary" autoFocus busy={busy} onClick={() => { setAsking(false); onConfirm(); }}>Start over</Button>
+        </span>
+      ) : (
+        <Button size="sm" kind="ghost" icon={<RotateCcw size={14} strokeWidth={2.25} />} onClick={() => setAsking(true)}>Start over</Button>
       )}
     </div>
   );

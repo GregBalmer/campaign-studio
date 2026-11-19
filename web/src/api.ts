@@ -53,6 +53,8 @@ export interface ProductState {
   provider?: string | null;
   model?: string | null;
   prompt?: string | null;
+  /** The person rewrote the prompt; "Try another" keeps their wording. */
+  prompt_edited?: boolean;
   attempt?: number;
   focal?: [number, number];
   approved?: Approval | null;
@@ -66,6 +68,10 @@ export interface CopyEntry {
   text: string;
   back_translation: string;
   note: string;
+  /** What meaning the translation changed from the source, in one line; empty when it kept it. */
+  drift?: string;
+  /** The change someone asked for in English that produced this line. */
+  asked?: string;
   origin: "source" | "machine" | "edited";
   approved: Approval | null;
 }
@@ -172,18 +178,23 @@ export const api = {
   campaigns: () => call<CampaignSummary[]>("GET", "campaigns"),
   createCampaign: (name: string) => call<View>("POST", "campaigns", { name }),
   get: (id: string) => call<View>("GET", `campaigns/${id}`),
-  reset: (id: string) => call<View>("POST", `campaigns/${id}/reset`),
+  reset: (id: string, by: string) => call<View>("POST", `campaigns/${id}/reset`, { by }),
+  revealOutputs: (id: string) => call<{ ok: boolean }>("POST", `campaigns/${id}/reveal`, {}),
   deleteCampaign: (id: string) => call<CampaignSummary[]>("DELETE", `campaigns/${id}`),
   patchBrief: (id: string, patch: Partial<Brief>) => call<View>("PATCH", `campaigns/${id}/brief`, patch),
   setProvider: (id: string, kind: ProviderKind, provider: string) =>
     call<View>("POST", `campaigns/${id}/provider`, { kind, provider }),
   upload: (id: string, target: string, file: File) =>
     call<View>("POST", `campaigns/${id}/upload?target=${encodeURIComponent(target)}&name=${encodeURIComponent(file.name)}`, file),
+  suggestAudience: (id: string, draft: Pick<Brief, "message" | "products" | "markets">) =>
+    call<{ text: string; demo: boolean }>("POST", `campaigns/${id}/suggest-audience`, draft),
+  describePhoto: (id: string, pid: string, name: string) =>
+    call<{ text: string }>("POST", `campaigns/${id}/products/${pid}/describe`, { name }),
   removePhoto: (id: string, pid: string) => call<View>("DELETE", `campaigns/${id}/products/${pid}/photo`),
   setSource: (id: string, pid: string, generate: boolean) =>
     call<View>("POST", `campaigns/${id}/products/${pid}/source`, { generate }),
-  makeMaster: (id: string, pid: string, by: string) =>
-    call<View>("POST", `campaigns/${id}/products/${pid}/master`, { by }),
+  makeMaster: (id: string, pid: string, by: string, prompt?: string, fromBrief = false) =>
+    call<View>("POST", `campaigns/${id}/products/${pid}/master`, { by, prompt, from_brief: fromBrief }),
   setFocal: (id: string, pid: string, x: number, y: number, w: number, h: number) =>
     call<View>("POST", `campaigns/${id}/products/${pid}/focal`, { x, y, w, h }),
   approveMaster: (id: string, pid: string, by: string) =>
@@ -193,6 +204,9 @@ export const api = {
   translate: (id: string, by: string, force = false) => call<View>("POST", `campaigns/${id}/translate`, { by, force }),
   editCopy: (id: string, lang: string, text: string, by: string) =>
     call<View>("POST", `campaigns/${id}/copy/${lang}`, { text, by }),
+  /** `instruction` is plain English, or "closer" / "shorter" for the quick picks. */
+  reviseCopy: (id: string, lang: string, instruction: string, by: string) =>
+    call<View>("POST", `campaigns/${id}/copy/${lang}/revise`, { instruction, by }),
   reopenCopy: (id: string, lang: string, by: string) =>
     call<View>("POST", `campaigns/${id}/copy/${lang}/reopen`, { by }),
   approveCopy: (id: string, lang: string, by: string) =>

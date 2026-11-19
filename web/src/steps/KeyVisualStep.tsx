@@ -4,33 +4,11 @@ import { api, masterUrl, type Check as CheckT, type View } from "../api";
 import { Button, ErrorNote, NextPanel, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function KeyVisualStep() {
-  const { view, run, busy, reviewer, goTo, errors } = useApp();
+  const { view, run, reviewer, goTo } = useApp();
   const products = view.brief.products;
-  const firstOpen = products.find((p) => !view.products[p.id]?.approved)?.id ?? products[0].id;
-  const [pid, setPid] = useState(firstOpen);
-  const product = products.find((p) => p.id === pid) ?? products[0];
-  const ps = view.products[product.id] ?? {};
-  const generating = busy.has(`master-${product.id}`);
   const approvedCount = products.filter((p) => view.products[p.id]?.approved).length;
   const allApproved = approvedCount === products.length;
 
-  const make = async () => {
-    const by = await reviewer();
-    await run(`master-${product.id}`, () => api.makeMaster(view.id, product.id, by));
-  };
-  const approve = async () => {
-    const by = await reviewer();
-    const ok = await run(`approve-${product.id}`, () => api.approveMaster(view.id, product.id, by));
-    const next = products.find((p) => p.id !== product.id && !view.products[p.id]?.approved);
-    if (ok && next) setPid(next.id);
-  };
-  const switchSource = async (generate: boolean) => {
-    const by = await reviewer();
-    await run(`master-${product.id}`, async () => {
-      await api.setSource(view.id, product.id, generate);
-      return api.makeMaster(view.id, product.id, by);
-    });
-  };
   const toMessage = async () => {
     goTo(2);
     if (view.languages.some((l) => !view.copy[l])) {
@@ -38,12 +16,6 @@ export default function KeyVisualStep() {
       void run("translate", () => api.translate(view.id, by));
     }
   };
-
-  const generatedBy = ps.origin === "supplied" ? "Your photo"
-    : ps.provider === "openai" ? `Created by OpenAI${ps.seconds ? ` in ${Math.round(ps.seconds)}s` : ""}`
-    : ps.provider === "firefly" ? `Created by Adobe Firefly${ps.seconds ? ` in ${Math.round(ps.seconds)}s` : ""}`
-    : ps.provider === "firefly-test" ? "Created by the Firefly test server"
-    : ps.provider === "mock" ? "Demo image (drawn locally)" : "";
 
   return (
     <>
@@ -54,85 +26,140 @@ export default function KeyVisualStep() {
         </div>
       </div>
 
-      {/* Same two columns as every step, so the next-step panel sits in the same place. */}
+      {/* One row per product, so nothing swaps as you work and five products scroll like two.
+          The right-hand column holds only the next step, as on every step. */}
       <div className="grid-2">
-        <div>
-        <div className="product-tabs" role="tablist">
-          {products.map((p) => {
-            const s = view.products[p.id] ?? {};
-            const url = masterUrl(view, p.id);
-            return (
-              <button key={p.id} role="tab" aria-selected={p.id === pid} className={`product-tab ${p.id === pid ? "active" : ""}`} onClick={() => setPid(p.id)}>
-                {url ? <img src={`${url}?v=${s.attempt ?? 0}&w=96`} alt="" /> : <span className="thumb" />}
-                {p.name || "Untitled product"}
-                {busy.has(`master-${p.id}`) ? <StatusBadge status="neutral">Creating…</StatusBadge>
-                  : errors[`master-${p.id}`] ? <StatusBadge status="fail">Didn't work</StatusBadge>
-                  : s.approved ? <StatusBadge status="pass"><Check size={12} strokeWidth={3} /> Approved</StatusBadge>
-                  : s.master ? <StatusBadge status="warn">Needs approval</StatusBadge> : null}
-              </button>
-            );
-          })}
-        </div>
-          <FocalStage view={view} pid={product.id} generating={generating} onCreate={make} />
+        <div className="stack kv-rows">
+          {products.map((p) => <ProductRow key={p.id} pid={p.id} />)}
         </div>
 
-        <aside className="sticky stack">
+        <aside className="sticky">
           <NextPanel label="Key visuals" figure={`${approvedCount} of ${products.length} approved`}
             detail={allApproved ? "Every product has its key visual." : "Approve one for each product to continue."}>
             <Button kind="primary" size="lg" className="btn-block" disabled={!allApproved} onClick={toMessage}>Continue to the message</Button>
           </NextPanel>
-          <section className="card card-pad">
-            <h3 className="card-title">{product.name}</h3>
-            <p className="card-hint" style={{ marginBottom: 16 }}>{generatedBy || "No key visual yet."}</p>
-
-            <div className="stack">
-              <ErrorNote k={`master-${product.id}`} />
-              {ps.approved ? (
-                <>
-                  <div className="approved-stamp">
-                    <Check size={18} strokeWidth={3} />
-                    <span>Approved by {ps.approved.by} <span className="muted">· {timeAgo(ps.approved.at)}</span></span>
-                  </div>
-                  <Button kind="ghost" icon={<Undo2 size={16} />} onClick={async () => { const by = await reviewer(); run("reopen", () => api.reopenMaster(view.id, product.id, by)); }}>
-                    Reopen to make changes
-                  </Button>
-                </>
-              ) : (
-                <>
-                  <Button kind="approve" size="lg" className="btn-block" disabled={!ps.master || generating}
-                    busy={busy.has(`approve-${product.id}`)} icon={<Check size={18} strokeWidth={2.6} />} onClick={approve}>
-                    Approve key visual
-                  </Button>
-                  <div className="row">
-                    {ps.origin !== "supplied" && (
-                      <Button className="btn-block" disabled={generating} icon={<RefreshCw size={16} />} onClick={make}>
-                        {ps.master ? "Try another" : "Create one"}
-                      </Button>
-                    )}
-                    {product.photo && ps.origin === "generated" && (
-                      <Button className="btn-block" disabled={generating} icon={<Camera size={16} />} onClick={() => switchSource(false)}>Use my photo</Button>
-                    )}
-                    {product.photo && ps.origin === "supplied" && (
-                      <Button className="btn-block" disabled={generating} icon={<Sparkles size={16} />} onClick={() => switchSource(true)}>Create one instead</Button>
-                    )}
-                  </div>
-                </>
-              )}
-            </div>
-
-            {ps.master && !generating && <div style={{ marginTop: 20 }}><MiniPreviews view={view} pid={product.id} /></div>}
-
-            {ps.prompt && (
-              <details className="details">
-                <summary><ChevronRight size={14} /> What we asked the generator for</summary>
-                <p>{ps.prompt}</p>
-              </details>
-            )}
-          </section>
         </aside>
       </div>
-
     </>
+  );
+}
+
+/** One product: its key visual on the left, everything you do to it on the right. */
+function ProductRow({ pid }: { pid: string }) {
+  const { view, run, busy, reviewer, errors } = useApp();
+  const products = view.brief.products;
+  const product = products.find((p) => p.id === pid)!;
+  const ps = view.products[pid] ?? {};
+  const generating = busy.has(`master-${pid}`);
+  const row = useRef<HTMLElement>(null);
+  const [editing, setEditing] = useState(false);
+  const [prompt, setPrompt] = useState(ps.prompt ?? "");
+  useEffect(() => { if (!editing) setPrompt(ps.prompt ?? ""); }, [ps.prompt, editing]);
+
+  const make = async (custom?: string, fromBrief = false) => {
+    const by = await reviewer();
+    setEditing(false);
+    await run(`master-${pid}`, () => api.makeMaster(view.id, pid, by, custom, fromBrief));
+  };
+  const approve = async () => {
+    const by = await reviewer();
+    const ok = await run(`approve-${pid}`, () => api.approveMaster(view.id, pid, by));
+    // Bring the next product that still needs a decision into view.
+    const next = products.find((p) => p.id !== pid && !view.products[p.id]?.approved);
+    if (ok && next) document.getElementById(`kv-${next.id}`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+  const switchSource = async (generate: boolean) => {
+    const by = await reviewer();
+    await run(`master-${pid}`, async () => {
+      await api.setSource(view.id, pid, generate);
+      return api.makeMaster(view.id, pid, by);
+    });
+  };
+
+  const generatedBy = ps.origin === "supplied" ? "Your photo"
+    : ps.provider === "openai" ? `Created by OpenAI${ps.seconds ? ` in ${Math.round(ps.seconds)}s` : ""}`
+    : ps.provider === "firefly" ? `Created by Adobe Firefly${ps.seconds ? ` in ${Math.round(ps.seconds)}s` : ""}`
+    : ps.provider === "firefly-test" ? "Created by the Firefly test server"
+    : ps.provider === "mock" ? "Demo image (drawn locally)" : "";
+
+  return (
+    <section className="card card-pad kv-row" id={`kv-${pid}`} ref={row}>
+      {/* The product's name and where its image came from head the whole row. */}
+      <div className="kv-head">
+        <h3>{product.name || "Untitled product"}</h3>
+        <span className="muted small">{generatedBy || "No key visual yet"}{ps.prompt_edited && ps.origin === "generated" ? ", from your wording" : ""}</span>
+        <span className="space" />
+        {generating ? <StatusBadge status="neutral">Creating…</StatusBadge>
+          : errors[`master-${pid}`] ? <StatusBadge status="fail">Didn't work</StatusBadge>
+          : ps.approved ? <span title={`Approved by ${ps.approved.by}, ${timeAgo(ps.approved.at)}`}><StatusBadge status="pass"><Check size={12} strokeWidth={3} /> Approved</StatusBadge></span>
+          : ps.master ? <StatusBadge status="warn">Needs approval</StatusBadge> : null}
+      </div>
+
+      <FocalStage view={view} pid={pid} generating={generating} onCreate={() => make()} />
+
+      <div className="kv-side">
+        <div className="stack">
+          <ErrorNote k={`master-${pid}`} />
+          {ps.approved ? (
+            <>
+              {/* The badge in the row's header already says Approved; who and when is on hover. */}
+              <Button kind="ghost" className="kv-reopen" icon={<Undo2 size={16} />} onClick={async () => { const by = await reviewer(); run("reopen", () => api.reopenMaster(view.id, pid, by)); }}>
+                Reopen to make changes
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button kind="approve" size="lg" className="btn-block" disabled={!ps.master || generating}
+                busy={busy.has(`approve-${pid}`)} icon={<Check size={18} strokeWidth={2.6} />} onClick={approve}>
+                Approve key visual
+              </Button>
+              <div className="row">
+                {ps.origin !== "supplied" && (
+                  <Button className="btn-block" disabled={generating} icon={<RefreshCw size={16} />} onClick={() => make()}>
+                    {ps.master ? "Try another" : "Create one"}
+                  </Button>
+                )}
+                {product.photo && ps.origin === "generated" && (
+                  <Button className="btn-block" disabled={generating} icon={<Camera size={16} />} onClick={() => switchSource(false)}>Use my photo</Button>
+                )}
+                {product.photo && ps.origin === "supplied" && (
+                  <Button className="btn-block" disabled={generating} icon={<Sparkles size={16} />} onClick={() => switchSource(true)}>Create one instead</Button>
+                )}
+              </div>
+            </>
+          )}
+        </div>
+
+        {ps.master && !generating && <div style={{ marginTop: ps.approved ? 12 : 20 }}><MiniPreviews view={view} pid={pid} /></div>}
+      </div>
+
+      {/* Long text, so it gets the row's full width rather than the narrow side column. */}
+
+        {ps.prompt && ps.origin === "generated" && (
+          <details className="details kv-prompt" open={editing || undefined}>
+            <summary><ChevronRight size={14} /> What we asked the generator for</summary>
+            {editing ? (
+              <div className="prompt-edit">
+                <textarea className="textarea" rows={8} value={prompt} onChange={(e) => setPrompt(e.target.value)} aria-label="What to ask the generator for" autoFocus />
+                <div className="row">
+                  <Button kind="primary" size="sm" icon={<Sparkles size={14} />} disabled={!prompt.trim() || generating} onClick={() => make(prompt.trim())}>Create with this</Button>
+                  <Button kind="ghost" size="sm" onClick={() => { setEditing(false); setPrompt(ps.prompt ?? ""); }}>Cancel</Button>
+                </div>
+              </div>
+            ) : (
+              <>
+                <p>{ps.prompt}</p>
+                {!ps.approved && (
+                  <span className="prompt-links">
+                    <button className="link" onClick={() => setEditing(true)}>Change the wording and try again</button>
+                    {ps.prompt_edited && <button className="link" disabled={generating} onClick={() => make(undefined, true)}>Go back to the brief's wording</button>}
+                  </span>
+                )}
+              </>
+            )}
+          </details>
+        )}
+    </section>
   );
 }
 

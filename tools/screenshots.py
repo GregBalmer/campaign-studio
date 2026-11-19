@@ -10,7 +10,7 @@ It signs in as the sample's demo person (Sam Rivera), hands that sign-in to a
 headless Chrome, and walks the sample campaign into the state each screenshot
 shows: a key visual waiting for approval, both languages approved, then the ads
 built with every passing one approved. So it changes the sample. Choose
-"Start the sample over" in the app afterwards if you want it back at the start.
+"Start over" (beside the campaign name) afterwards if you want it back at the start.
 
 Before the first run, make both of the sample's key visuals in the app (the
 After-Sun Aloe Gel one is created, not supplied).

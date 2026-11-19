@@ -11,6 +11,7 @@ product least.
 """
 from __future__ import annotations
 
+
 import math
 from functools import lru_cache
 from pathlib import Path
@@ -22,7 +23,7 @@ from . import config
 # Half-width and half-height of the product zone, as a share of the master.
 ZONE = (0.08, 0.2)
 # Bump when the layout rules change, so existing ads are rebuilt (and re-reviewed).
-LAYOUT_VERSION = 2
+LAYOUT_VERSION = 3  # 3: one card position per product and size, shared by every language
 
 NO_LINE_START = set("。、．，,.!?！？)」』）ー〜ゃゅょっャュョッ")
 BREAK_AFTER = set("のにをはがへともでや、。！？」』")
@@ -47,6 +48,7 @@ def hex_rgb(c: str) -> tuple[int, int, int]:
 
 
 @lru_cache(maxsize=64)
+@lru_cache(maxsize=512)
 def font(lang: str, size: int, weight: str = "Bold") -> ImageFont.FreeTypeFont:
     name = "NotoSansJP.ttf" if lang in ("ja", "zh", "ko") else "Inter.ttf"
     f = ImageFont.truetype(str(config.FONTS / name), size)
@@ -186,10 +188,41 @@ def _smooth(t: float) -> float:
 
 # ---------------------------------------------------------------- render
 
+def _plan_rank(p: dict, order: int, short: int, base_size: int) -> tuple:
+    return (round(p["overlap"] / (short * short), 3), not p["clean"], len(p["lines"]) > 3,
+            p["size"] < base_size * 0.85, order)
+
+
+def shared_side(master: Image.Image, fmt: str, focal: tuple[float, float], texts: list[tuple[str, str]],
+                brand: dict, logo_path: Path | None, zone_size: tuple[float, float] = ZONE) -> str:
+    """One card position for a product in one size, used by every language, so the
+    markets' ads match and only the words change. Each position is judged by its
+    worst language: covering the product rules it out first, then awkward breaks,
+    more than three lines, and how many languages it would shrink."""
+    per_lang = [render(master, fmt, focal, t, lang, brand, logo_path, zone_size, plan_only=True) for t, lang in texts]
+    if not per_lang:
+        return LAYOUT[fmt]["sides"][0]
+    best = None
+    for i, s in enumerate(LAYOUT[fmt]["sides"]):
+        ps = [(r["plans"][i], r["short"], r["base_size"]) for r in per_lang]
+        rank = (max(round(p["overlap"] / (sh * sh), 3) for p, sh, _ in ps),
+                any(not p["clean"] for p, _, _ in ps),
+                any(len(p["lines"]) > 3 for p, _, _ in ps),
+                sum(p["size"] < b * 0.85 for p, _, b in ps),
+                i)
+        if best is None or rank < best[0]:
+            best = (rank, s)
+    return best[1]
+
+
 def render(master: Image.Image, fmt: str, focal: tuple[float, float], text: str, lang: str,
-           brand: dict, logo_path: Path | None, zone_size: tuple[float, float] = ZONE) -> dict:
+           brand: dict, logo_path: Path | None, zone_size: tuple[float, float] = ZONE,
+           side: str | None = None, plan_only: bool = False) -> dict:
     """Compose one finished frame. Returns the image plus the layout boxes the
-    checks need (all in output pixels)."""
+    checks need (all in output pixels).
+
+    `side` puts the card in a position chosen for every language at once (see
+    `shared_side`). `plan_only` stops before drawing and returns each position's plan."""
     spec = config.FORMATS[fmt]
     rules = LAYOUT[fmt]
     W, H = spec["size"]
@@ -283,11 +316,12 @@ def render(master: Image.Image, fmt: str, focal: tuple[float, float], text: str,
                 "overlap": _overlap(card, zone)}
 
     plans = [plan(s) for s in rules["sides"]]
+    if plan_only:
+        return {"plans": plans, "short": short, "base_size": base_size}
+    forced = [p for p in plans if p["side"] == side]
     # Least overlap with the product wins; then clean line breaks, full size,
     # and the format's preferred position.
-    chosen = min(enumerate(plans), key=lambda ip: (round(ip[1]["overlap"] / (short * short), 3),
-                                                   not ip[1]["clean"], len(ip[1]["lines"]) > 3,
-                                                   ip[1]["size"] < base_size * 0.85, ip[0]))[1]
+    chosen = forced[0] if forced else min(enumerate(plans), key=lambda ip: _plan_rank(ip[1], ip[0], short, base_size))[1]
     side, x, y = chosen["side"], chosen["x"], chosen["y"]
     lines, size, line_h = chosen["lines"], chosen["size"], chosen["line_h"]
     card = chosen["card"]

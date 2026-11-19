@@ -148,12 +148,21 @@ class MockProvider(ImageProvider, TextProvider):
         img.info["zone"] = (w * 0.62 / s, (base_y - top) / 2 / s + 0.01)
         return img
 
-    def translate(self, text: str, source: str, target: str, brief: dict) -> dict:
+    def translate(self, text: str, source: str, target: str, brief: dict,
+                  instruction: str = "", current: str = "") -> dict:
         if source == target:
-            return {"text": text, "back_translation": text, "note": ""}
+            return {"text": text, "back_translation": text, "note": "", "drift": ""}
         hit = KNOWN.get((text.strip(), target))
         if hit:
-            return {"text": hit[0], "back_translation": hit[1],
+            return {"text": hit[0], "back_translation": hit[1], "drift": "",
                     "note": "Demo translation from a fixed list. Connect OpenAI for live translation."}
-        return {"text": text, "back_translation": text,
+        return {"text": text, "back_translation": text, "drift": "",
                 "note": "Demo mode can't translate new wording. Type the translation, or connect OpenAI."}
+
+    def suggest_audience(self, brief: dict) -> str:
+        # The demo can't write one for a new brief, so it says what a good answer holds.
+        names = [p.get("name", "") for p in brief.get("products", [])]
+        if any("SPF" in n or "After-Sun" in n for n in names):
+            return ("Active adults 25 to 40 who spend summer weekends outdoors: hiking, swimming, at the beach.")
+        return "Adults [age range] who [what they do or care about], and why they'd want this product."
+

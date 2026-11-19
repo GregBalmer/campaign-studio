@@ -69,6 +69,23 @@ def reset_sample(cid: str) -> None:
         shutil.copytree(src, config.WORKSPACE / cid)
 
 
+def start_over(cid: str, by: str | None = None) -> None:
+    """Go back to step 1. A sample returns to how it shipped. A campaign someone
+    made keeps its brief and photos; its key visuals, translations, ads and
+    decisions are cleared."""
+    if (config.SAMPLES / cid).exists():
+        reset_sample(cid)
+        return
+    with _lock:
+        c = Campaign(cid)
+        for key in ("products", "copy", "frames"):
+            c.state[key] = {}
+        shutil.rmtree(c.dir / "masters", ignore_errors=True)
+        shutil.rmtree(config.OUTPUTS / cid, ignore_errors=True)
+        c.log(by, "campaign.restarted")
+        c.save()
+
+
 def delete_campaign(cid: str) -> None:
     """Remove a campaign someone made, and its finished ads. Samples can only be started over."""
     if (config.SAMPLES / cid).exists():
@@ -349,6 +366,9 @@ class Campaign:
         if text != cur["text"]:
             cur.update({"text": text, "origin": "edited" if cur["origin"] != "source" else "source",
                         "approved": None})
+            if cur["origin"] == "edited":
+                # The English meaning and the notes described the machine's line, not this one.
+                cur.update({"back_translation": "", "note": "", "drift": ""})
             if lang == brief_mod.source_language(self.brief):
                 # New source wording: every translation is now out of date.
                 self.brief["message"] = text
@@ -388,13 +408,19 @@ class Campaign:
             raise StudioError("Unknown format.")
         ps = self.pstate(pid)
         master = self.master_image(pid)
-        copy = text if text is not None else self.state["copy"].get(lang, {}).get("text") or self.brief["message"]
-        layout = imaging.render(master, fmt, tuple(ps.get("focal") or (0.5, 0.5)), copy, lang,
-                                self.brief["brand"], self.logo_path(),
-                                tuple(ps.get("zone") or imaging.ZONE))
+        copy = text if text is not None else self._copy_text(lang)
+        focal = tuple(ps.get("focal") or (0.5, 0.5))
+        zone = tuple(ps.get("zone") or imaging.ZONE)
+        # Every language's ad for this product and size puts the card in the same place.
+        texts = [(copy if other == lang else self._copy_text(other), other) for other in brief_mod.languages(self.brief)]
+        side = imaging.shared_side(master, fmt, focal, texts, self.brief["brand"], self.logo_path(), zone)
+        layout = imaging.render(master, fmt, focal, copy, lang, self.brief["brand"], self.logo_path(), zone, side=side)
         layout["checks"] = checks_mod.run(layout, copy, lang, self.brief)
         layout["text"] = copy
         return layout
+
+    def _copy_text(self, lang: str) -> str:
+        return self.state["copy"].get(lang, {}).get("text") or self.brief["message"]
 
     def preview_png(self, pid: str, fmt: str, lang: str, text: str | None = None, width: int = 720) -> tuple[bytes, list]:
         layout = self.render(pid, fmt, lang, text)
@@ -410,7 +436,9 @@ class Campaign:
 
     def _signature(self, pid: str, fmt: str, lang: str) -> str:
         ps = self.pstate(pid)
-        parts = [ps.get("master"), str(ps.get("focal")), str(ps.get("zone")), self.state["copy"].get(lang, {}).get("text"),
+        # Every language's words, not just this one's: they share the card's position.
+        words = [self._copy_text(other) for other in brief_mod.languages(self.brief)]
+        parts = [ps.get("master"), str(ps.get("focal")), str(ps.get("zone")), lang, json.dumps(words, ensure_ascii=False),
                  json.dumps(self.brief["brand"], sort_keys=True), fmt,
                  imaging.LAYOUT_VERSION]
         return hashlib.sha1("|".join(map(str, parts)).encode()).hexdigest()[:12]
@@ -578,7 +606,7 @@ def with_campaign(cid: str, fn):
 
 
 __all__ = ["Campaign", "StudioError", "ProviderError", "list_campaigns", "create_campaign",
-           "reset_sample", "delete_campaign", "ensure_samples", "with_campaign", "generate_master", "translate_all"]
+           "reset_sample", "start_over", "delete_campaign", "ensure_samples", "with_campaign", "generate_master", "translate_all"]
 
 
 # ------------------------------------------------------------ slow steps
@@ -586,7 +614,11 @@ __all__ = ["Campaign", "StudioError", "ProviderError", "list_campaigns", "create
 # without holding the lock, then re-load the campaign and apply their result,
 # so the person can work on one product while another is generating.
 
-def generate_master(cid: str, pid: str, by: str | None = None) -> dict:
+def generate_master(cid: str, pid: str, by: str | None = None, prompt: str | None = None,
+                    from_brief: bool = False) -> dict:
+    """Make a key visual. `prompt` is the person's own wording; once they've
+    rewritten it, "Try another" keeps using theirs until they ask for the
+    brief's wording again (`from_brief`)."""
     with _lock:
         c = Campaign(cid)
         p = c.product(pid)
@@ -594,7 +626,9 @@ def generate_master(cid: str, pid: str, by: str | None = None) -> dict:
         if p.get("photo") and not ps.get("force_generate"):
             return c.make_master(pid, by)
         provider = providers.get_image(c.state["image_provider"])
-        prompt = c.prompt_for(pid)
+        prompt = (prompt or "").strip()[:4000] or None
+        edited = bool(prompt) or bool(not from_brief and ps.get("prompt_edited") and ps.get("prompt"))
+        prompt = prompt or (ps["prompt"] if edited else c.prompt_for(pid))
         attempt = ps.get("attempt", 0) + 1
         ps["attempt"] = attempt  # reserve the number so parallel clicks don't collide
         c.save()
@@ -616,12 +650,79 @@ def generate_master(cid: str, pid: str, by: str | None = None) -> dict:
         ps.update({"master": name, "origin": "generated", "provider": provider.id,
                    "zone": [round(v, 4) for v in img.info.get("zone", imaging.ZONE)],
                    "model": provider.model,
-                   "prompt": prompt, "focal": [round(f, 4) for f in focal],
+                   "prompt": prompt, "prompt_edited": edited, "focal": [round(f, 4) for f in focal],
                    "approved": None, "seconds": seconds, "size": list(img.size)})
-        c.log(by, "master.generated", f"{c.product(pid)['name']} (attempt {attempt}, {provider.label}, {seconds}s)")
+        c.log(by, "master.generated", f"{c.product(pid)['name']} (attempt {attempt}, {provider.label}, {seconds}s"
+                                      f"{', own wording' if edited else ''})")
         c._stale_frames(pid)
         c.save()
         return ps
+
+
+def suggest_audience(cid: str, draft: dict) -> dict:
+    """A first draft of "Who it's for", from the brief as it is on screen right now."""
+    with _lock:
+        c = Campaign(cid)
+        brief = dict(c.brief)
+        # The form autosaves after a pause, so use what's typed if the browser sent it.
+        if isinstance(draft.get("message"), str):
+            brief["message"] = draft["message"]
+        for key in ("products", "markets"):
+            if isinstance(draft.get(key), list):
+                brief[key] = draft[key]
+        provider = providers.get_text(c.state["text_provider"])
+    return {"text": provider.suggest_audience(brief), "demo": provider.id == "mock"}
+
+
+def describe_photo(cid: str, pid: str, name: str = "") -> dict:
+    """A product description read from its photo, for the person to check and keep."""
+    with _lock:
+        c = Campaign(cid)
+        p = c.product(pid)
+        if not p.get("photo"):
+            raise StudioError("Add a photo of the product first.")
+        img = Image.open(c.dir / p["photo"]).convert("RGB")
+        provider = providers.get_text(c.state["text_provider"])
+        brief = c.brief
+    img.thumbnail((768, 768))
+    buf = io.BytesIO()
+    img.save(buf, "PNG")
+    return {"text": provider.describe_photo(buf.getvalue(), name or p.get("name", ""), brief)}
+
+
+# The quick picks on the Message step, written as the instruction the translator gets.
+REVISE_PRESETS = {
+    "closer": "Stay closer to the original: keep every idea it has, and only rephrase where "
+              "a word-for-word version would sound wrong.",
+    "shorter": "Make it shorter, so it reads bigger on the ad. Keep the meaning.",
+}
+
+
+def revise_translation(cid: str, lang: str, instruction: str, by: str | None = None) -> dict:
+    """Rewrite one language's line from a change asked for in English, so a reviewer
+    who can't read the language can still fix it."""
+    asked = instruction.strip()[:300]
+    if not asked:
+        raise StudioError("Say what should be different.")
+    with _lock:
+        c = Campaign(cid)
+        src = brief_mod.source_language(c.brief)
+        if lang == src or lang not in brief_mod.languages(c.brief) or lang not in c.state["copy"]:
+            raise StudioError("That language isn't a translation in this campaign.")
+        message = c.brief.get("message", "").strip()
+        current = c.state["copy"][lang]["text"]
+        provider = providers.get_text(c.state["text_provider"])
+        brief = c.brief
+    res = provider.translate(message, src, lang, brief, instruction=REVISE_PRESETS.get(asked, asked), current=current)
+    label = {"closer": "Closer to the original", "shorter": "Shorter"}.get(asked, asked)
+    with _lock:
+        c = Campaign(cid)
+        c.state["copy"][lang] = {**res, "origin": "machine", "asked": label, "provider": provider.id,
+                                 "model": provider.text_model, "approved": None}
+        c.log(by, "copy.revised", f"{lang}: {label}")
+        c._stale_frames()
+        c.save()
+        return c.state["copy"][lang]
 
 
 def translate_all(cid: str, by: str | None = None, force: bool = False) -> dict:

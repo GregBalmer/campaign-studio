@@ -1,13 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, CheckCheck, Download, FolderOpen, Loader2, X } from "lucide-react";
-import { api, frameUrl, LANGUAGE_NAMES, type Frame } from "../api";
-import { Button, CheckIconDot, ErrorNote, Markers, StatusBadge, timeAgo, useApp, useEscape } from "../ui";
+import { api, ApiError, frameUrl, LANGUAGE_NAMES, type Frame } from "../api";
+import { Button, CheckIconDot, ErrorNote, Markers, NextPanel, StatusBadge, timeAgo, useApp, useEscape } from "../ui";
 
 type Filter = "all" | "open" | "approved" | "rejected";
 const FORMAT_ORDER = ["1x1", "9x16", "16x9"];
 
 export default function ReviewStep() {
-  const { view, run, busy, reviewer } = useApp();
+  const { view, run, busy, reviewer, toast } = useApp();
   const [filter, setFilter] = useState<Filter>("all");
   const [openKey, setOpenKey] = useState<string | null>(null);
   const building = busy.has("fanout");
@@ -59,6 +59,11 @@ export default function ReviewStep() {
     );
   }
 
+  const showFolder = async () => {
+    try { await api.revealOutputs(view.id); }
+    catch (e) { toast(e instanceof ApiError ? e.message : "Couldn't open the folder.", "error"); }
+  };
+
   return (
     <>
       <div className="page-head">
@@ -66,77 +71,97 @@ export default function ReviewStep() {
           <h1>Review and export</h1>
           <p>Every size in every market. Anything a check flagged is marked on the ad itself. Click an ad to look closer.</p>
         </div>
-        <div className="row">
-          <a className="btn btn-secondary" href={`/api/campaigns/${view.id}/download`} aria-disabled={!view.has_outputs}>
-            <Download size={16} /> All ads
-          </a>
-          <a className={`btn btn-primary ${counts.approved ? "" : "disabled"}`} href={counts.approved ? `/api/campaigns/${view.id}/download?only=approved` : undefined}
-            style={counts.approved ? undefined : { opacity: 0.45, pointerEvents: "none" }}>
-            <Download size={16} /> Approved ({counts.approved})
-          </a>
-        </div>
       </div>
 
-      <div className="review-bar">
-        {([
-          ["all", counts.total, counts.total === 1 ? "ad" : "ads", undefined, "Show every ad"],
-          ["open", open, "to review", undefined, "Show ads nobody has approved or rejected yet"],
-          ["approved", counts.approved, "approved", counts.approved ? "var(--ok)" : undefined, "Show approved ads"],
-          ["rejected", counts.rejected, "rejected", counts.rejected ? "var(--fail)" : undefined, "Show rejected ads"],
-        ] as const).map(([k, n, label, color, title]) => (
-          <button key={k} className={`stat ${filter === k ? "on" : ""}`} aria-pressed={filter === k}
-            onClick={() => setFilter(filter === k ? "all" : k)} title={title}>
-            <b style={{ color }}>{n}</b>
-            <span>{label}{k === "open" && flaggedOpen > 0 && <em className="stat-flag"> · {flaggedOpen} flagged</em>}</span>
-          </button>
-        ))}
-        <span className="space" />
-        {building && <span className="row muted small"><Loader2 size={15} className="spin" /> Updating…</span>}
-        {passingOpen.length > 0 ? (
-          <Button kind="approve" icon={<CheckCheck size={17} />} busy={busy.has("bulk")} onClick={approveAllPassing}>
-            Approve all that pass ({passingOpen.length})
-          </Button>
-        ) : counts.total > 0 && !building && (
-          <span className="row muted small"><CheckCheck size={16} /> {open ? "Every passing ad is approved" : "Every ad has a decision"}</span>
-        )}
-      </div>
-      <div style={{ marginBottom: 16 }}><ErrorNote k="fanout" action="Build again" /></div>
+      {/* Same two columns as every step: the ads on the left, the next step in the grey panel on the right. */}
+      <div className="grid-2">
+        <div>
+          {/* Three counts that also filter. If an ad still needs a decision, it's here once, under Needs review. */}
+          <div className="review-bar">
+            {([
+              ["open", open, "Needs review", open ? "var(--warn)" : undefined, "Show ads nobody has approved or rejected yet"],
+              ["approved", counts.approved, "Approved", counts.approved ? "var(--ok)" : undefined, "Show approved ads"],
+              ["rejected", counts.rejected, "Rejected", counts.rejected ? "var(--fail)" : undefined, "Show rejected ads"],
+            ] as const).map(([k, n, label, color, title]) => (
+              <button key={k} className={`stat ${filter === k ? "on" : ""}`} aria-pressed={filter === k}
+                onClick={() => setFilter(filter === k ? "all" : k)} title={filter === k ? "Show every ad" : title}>
+                <b style={{ color }}>{n}</b>
+                <span>{label}</span>
+              </button>
+            ))}
+            <span className="space" />
+            {building && <span className="row muted small"><Loader2 size={15} className="spin" /> Updating…</span>}
+            {filter !== "all" && !building && <button className="link small" onClick={() => setFilter("all")}>Show all {counts.total} ads</button>}
+          </div>
+          <div style={{ marginBottom: 16 }}><ErrorNote k="fanout" action="Build again" /></div>
 
-      {view.brief.products.map((p) => {
-        const items = shown.filter(([, f]) => f.product === p.id);
-        if (!items.length) return null;
-        return (
-          <section className="product-section" key={p.id}>
-            <h2>{p.name}</h2>
-            {view.brief.markets.map((m) => {
-              const row = items.filter(([, f]) => f.region === m.region);
-              if (!row.length) return null;
-              return (
-                <div className="sheet-row" key={m.region}>
-                  <div className="sheet-row-label">
-                    <b>{m.name}</b>
-                    <span className="muted">{LANGUAGE_NAMES[m.language]}</span>
-                  </div>
-                  <div className="sheet">
-                    {row.map(([k, f]) => <Tile key={k} f={f} onOpen={() => setOpenKey(k)} />)}
-                  </div>
-                </div>
-              );
-            })}
-          </section>
-        );
-      })}
-      {shown.length === 0 && (
-        <div className="empty">
-          {{ all: "No ads yet.", open: "Nothing left to review. Every ad has a decision.",
-             approved: "No ads approved yet.", rejected: "No ads rejected." }[filter]}
-          {filter !== "all" && <><br /><button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setFilter("all")}>Show all ads</button></>}
+          {view.brief.products.map((p) => {
+            const items = shown.filter(([, f]) => f.product === p.id);
+            if (!items.length) return null;
+            return (
+              <section className="product-section" key={p.id}>
+                <h2>{p.name}</h2>
+                {view.brief.markets.map((m) => {
+                  const row = items.filter(([, f]) => f.region === m.region);
+                  if (!row.length) return null;
+                  return (
+                    <div className="sheet-row" key={m.region}>
+                      <div className="sheet-row-label">
+                        <b>{m.name}</b>
+                        <span className="muted">{LANGUAGE_NAMES[m.language]}</span>
+                      </div>
+                      <div className="sheet">
+                        {row.map(([k, f]) => <Tile key={k} f={f} onOpen={() => setOpenKey(k)} />)}
+                      </div>
+                    </div>
+                  );
+                })}
+              </section>
+            );
+          })}
+          {shown.length === 0 && (
+            <div className="empty">
+              {{ all: "No ads yet.", open: "Nothing left to review. Every ad has a decision.",
+                 approved: "No ads approved yet.", rejected: "No ads rejected." }[filter]}
+              {filter !== "all" && <><br /><button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setFilter("all")}>Show all ads</button></>}
+            </div>
+          )}
+
+          {view.has_outputs && (
+            <p className="saved-line">
+              <FolderOpen size={15} /> Your ads are also saved on this computer, sorted by product and size.
+              <button className="link" onClick={showFolder}>Show folder</button>
+            </p>
+          )}
         </div>
-      )}
 
-      <p className="muted small" style={{ marginTop: 40, display: "flex", gap: 8, alignItems: "center" }}>
-        <FolderOpen size={15} /> Also saved on this computer in <code>outputs/{view.id}/</code>, by product and size, with <code>report.json</code>.
-      </p>
+        <aside className="sticky">
+          {/* The next thing to do sits where Continue sits on every other step. While ads that
+              pass every check are waiting, that's approving them; after that, it's the download. */}
+          <NextPanel label="Ads" figure={`${counts.approved} of ${counts.total} approved`}
+            detail={passingOpen.length > 0 ? `${passingOpen.length} pass every check and can be approved together.${flaggedOpen ? ` ${flaggedOpen} flagged need a closer look first.` : ""}`
+              : flaggedOpen > 0 ? `${flaggedOpen} flagged ${flaggedOpen === 1 ? "ad needs" : "ads need"} a closer look. Click ${flaggedOpen === 1 ? "it" : "one"} to decide.`
+              : open > 0 ? `${open} still ${open === 1 ? "needs" : "need"} a decision.`
+              : "Every ad has a decision."}>
+            {passingOpen.length > 0 ? (
+              <Button kind="primary" size="lg" className="btn-block" icon={<CheckCheck size={18} />} busy={busy.has("bulk")} onClick={approveAllPassing}>
+                Approve all that pass ({passingOpen.length})
+              </Button>
+            ) : (
+              <a className={`btn btn-primary btn-lg btn-block ${counts.approved ? "" : "disabled"}`}
+                href={counts.approved ? `/api/campaigns/${view.id}/download?only=approved` : undefined}
+                aria-disabled={!counts.approved}>
+                <Download size={18} /> Download approved ads
+              </a>
+            )}
+            {view.has_outputs && (
+              <a className="summary-link" href={`/api/campaigns/${view.id}/download${passingOpen.length > 0 && counts.approved ? "?only=approved" : ""}`}>
+                {passingOpen.length > 0 && counts.approved ? `Or download the ${counts.approved} approved so far` : `Download all ${counts.total} ads`}
+              </a>
+            )}
+          </NextPanel>
+        </aside>
+      </div>
 
       {openKey && view.frames[openKey] && (
         <Lightbox
@@ -153,18 +178,19 @@ export default function ReviewStep() {
 function Tile({ f, onOpen }: { f: Frame; onOpen: () => void }) {
   const { view } = useApp();
   const spec = view.formats[f.format];
-  const h = 200;
+  const h = 180;
   const w = Math.round((h * spec.size[0]) / spec.size[1]);
   const market = view.brief.markets.find((m) => m.region === f.region);
   const decided = f.decision?.value;
   return (
     <button className="tile" onClick={onOpen} style={{ width: w }}>
-      <div className={`tile-img ${decided ? `decided-${decided}` : ""}`} style={{ width: w, height: h }}>
+      <div className={`tile-img ${decided ? `decided-${decided}` : ""}`} style={{ width: w, height: h, aspectRatio: `${spec.size[0]} / ${spec.size[1]}` }}>
         <img src={`${frameUrl(view, f)}&w=640`} alt={`${spec.label}, ${market?.name}`} loading="lazy" />
         {!decided && <Markers checks={f.checks} />}
+        {/* Decided ads carry a mark, not a word: the same green check as a finished step. */}
         <span className="tile-status">
-          {decided === "approved" ? <StatusBadge status="pass"><Check size={12} strokeWidth={3} /> Approved</StatusBadge>
-            : decided === "rejected" ? <StatusBadge status="fail">Rejected</StatusBadge>
+          {decided === "approved" ? <span className="tile-mark ok" aria-label="Approved"><Check size={14} strokeWidth={3} /></span>
+            : decided === "rejected" ? <span className="tile-mark fail" aria-label="Rejected"><X size={14} strokeWidth={3} /></span>
             : f.status === "fail" ? <StatusBadge status="fail">Fix needed</StatusBadge>
             : f.status === "warn" ? <StatusBadge status="warn">Check</StatusBadge> : null}
         </span>

@@ -28,6 +28,17 @@ class TextProvider:
     label = "Base"
     text_model = "base"
 
-    def translate(self, text: str, source: str, target: str, brief: dict) -> dict:
-        """Return {"text": ..., "back_translation": ..., "note": ...}."""
+    def translate(self, text: str, source: str, target: str, brief: dict,
+                  instruction: str = "", current: str = "") -> dict:
+        """Return {"text", "back_translation", "note", "drift"}. `drift` says in one line what
+        meaning changed from the source, or is empty. `instruction` is a change the reviewer
+        asked for in the source language, applied to the `current` translation."""
         raise NotImplementedError
+
+    def suggest_audience(self, brief: dict) -> str:
+        """Draft the brief's "Who it's for" from its products, message and markets."""
+        raise ProviderError("This translation service can't suggest an audience.")
+
+    def describe_photo(self, png: bytes, name: str, brief: dict) -> str:
+        """Describe a product photo the way the brief asks: color, shape, packaging."""
+        raise ProviderError("This translation service can't read photos. Choose OpenAI under Models.")
