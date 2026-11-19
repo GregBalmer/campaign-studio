@@ -16,7 +16,7 @@ By hand, to try the app's Firefly flow offline:
     python3 tools/fake_firefly.py
 
 It prints the lines to put in the environment before `python3 start.py`, and
-the client ID and secret to paste into Settings.
+the client ID and secret to paste under Models.
 """
 from __future__ import annotations
 
@@ -231,7 +231,7 @@ def main() -> int:
     else:
         print(f"  FIREFLY_IMS_URL={fake.url} FIREFLY_API_URL={fake.url} python3 start.py")
     print()
-    print("Then in Settings, connect Adobe Firefly with:")
+    print("Then under Models, connect Adobe Firefly with:")
     print(f"  Client ID:      {CLIENT_ID}")
     print(f"  Client secret:  {CLIENT_SECRET}")
     print()
@@ -247,4 +247,9 @@ def main() -> int:
 
 
 if __name__ == "__main__":
+    # Run inside the app's own Python environment (.venv), setting it up if needed.
+    from pathlib import Path
+    sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
+    import start
+    start.ensure_environment(__file__)
     sys.exit(main())

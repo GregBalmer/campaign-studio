@@ -19,6 +19,10 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parent
 sys.path.insert(0, str(ROOT))
 
+# Run inside the app's own Python environment (.venv), setting it up if needed.
+import start  # noqa: E402
+start.ensure_environment(__file__)
+
 from studio import brief as brief_mod  # noqa: E402
 from studio import config, pipeline, providers  # noqa: E402
 

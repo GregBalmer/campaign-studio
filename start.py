@@ -35,8 +35,12 @@ def venv_python() -> Path:
     return VENV / ("Scripts/python.exe" if os.name == "nt" else "bin/python")
 
 
-def ensure_environment() -> None:
-    """Re-run this script inside .venv, creating it on first use."""
+def ensure_environment(script: str | Path | None = None) -> None:
+    """Re-run a script inside .venv, creating it and installing Pillow on first use.
+
+    start.py calls it for itself. cli.py and the tools call it with their own
+    path, so plain `python3 cli.py` works on a computer that has never run the app.
+    """
     if Path(sys.prefix).resolve() == VENV.resolve():
         return
     py = venv_python()
@@ -62,7 +66,7 @@ def ensure_environment() -> None:
     except FileNotFoundError:
         say(f"\nThe Python environment looks broken. Delete the .venv folder, then run {AGAIN} again.")
         sys.exit(1)
-    args = [str(py), str(Path(__file__).resolve())] + sys.argv[1:]
+    args = [str(py), str(Path(script or __file__).resolve())] + sys.argv[1:]
     if WINDOWS:
         # os.execv on Windows starts a second process and returns the prompt
         # early, which confuses Ctrl+C. Run it as a child and wait instead.

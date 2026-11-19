@@ -182,6 +182,8 @@ python3 cli.py path/to/brief.json --provider openai
 python3 cli.py --images firefly --translation openai
 ```
 
+Like `start.py`, these set up the app's private Python environment the first time, so plain `python3` works on a computer that has never run the app.
+
 `--provider` sets images and translation together; `--images` and `--translation` set them one at a time.
 
 The CLI records its approvals as `cli`, so the report never pretends a person reviewed those ads.

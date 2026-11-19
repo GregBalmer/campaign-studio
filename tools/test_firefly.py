@@ -18,6 +18,11 @@ ROOT = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(ROOT))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
+if __name__ == "__main__":
+    # Run inside the app's own Python environment (.venv), setting it up if needed.
+    import start  # noqa: E402
+    start.ensure_environment(__file__)
+
 from fake_firefly import CLIENT_ID, CLIENT_SECRET, TOKEN, FakeFirefly  # noqa: E402
 
 from studio import config, providers  # noqa: E402
