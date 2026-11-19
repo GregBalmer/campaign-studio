@@ -4,18 +4,13 @@ import { api, masterUrl, type Check as CheckT, type View } from "../api";
 import { Button, ErrorNote, NextPanel, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function KeyVisualStep() {
-  const { view, run, reviewer, goTo } = useApp();
+  const { view, goTo } = useApp();
   const products = view.brief.products;
   const approvedCount = products.filter((p) => view.products[p.id]?.approved).length;
   const allApproved = approvedCount === products.length;
 
-  const toMessage = async () => {
-    goTo(2);
-    if (view.languages.some((l) => !view.copy[l])) {
-      const by = await reviewer();
-      void run("translate", () => api.translate(view.id, by));
-    }
-  };
+  // The Message step translates whatever's missing as soon as it opens.
+  const toMessage = () => goTo(2);
 
   return (
     <>

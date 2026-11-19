@@ -1,16 +1,25 @@
 import { useEffect, useState } from "react";
-import { AlertTriangle, Check, Languages, MessageSquareText, Pencil } from "lucide-react";
+import { AlertTriangle, Check, Loader2, MessageSquareText, Pencil } from "lucide-react";
 import { api, LANGUAGE_NAMES, restrictedHits, type Check as CheckT } from "../api";
 import { Button, NextPanel, ErrorNote, Markers, StatusBadge, timeAgo, useApp, useDebounced } from "../ui";
 
 export default function MessageStep() {
-  const { view, run, busy, reviewer, goTo } = useApp();
+  const { view, run, busy, reviewer, goTo, errors } = useApp();
   const langs = view.languages;
   const approved = langs.filter((l) => view.copy[l]?.approved).length;
   const all = approved === langs.length;
   const translating = busy.has("translate");
   const missing = langs.some((l) => !view.copy[l]);
   const ads = view.brief.products.length * 3 * view.brief.markets.length;
+
+  // Translations are made in place, like key visuals: any language without its line
+  // (first visit, or after the English line changed) is translated straight away,
+  // and its card shows that it's working. If it fails, the card says so and offers a retry.
+  useEffect(() => {
+    if (missing && !translating && !errors["translate"]) {
+      reviewer().then((by) => run("translate", () => api.translate(view.id, by)));
+    }
+  }, [missing, translating]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // The review screen builds the ads as soon as it opens.
   const build = () => goTo(3);
@@ -28,31 +37,17 @@ export default function MessageStep() {
 
       <div className="grid-2">
       <div>
-      {missing && (
-        <div className="empty">
-          <ErrorNote k="translate" />
-          {translating ? (
-            <><Languages size={26} /><p style={{ margin: "12px 0 0" }}><b>Translating…</b> adapting the line for each market, not just swapping words.</p></>
-          ) : (
-            <Button kind="primary" icon={<Languages size={16} />}
-              onClick={async () => { const by = await reviewer(); run("translate", () => api.translate(view.id, by)); }}>
-              Translate the message
-            </Button>
-          )}
+      <div className="preview-size">
+        <span className="muted small">Preview every product as</span>
+        <div className="seg">
+          {Object.entries(view.formats).map(([k, f]) => (
+            <button key={k} className={k === format ? "on" : ""} aria-pressed={k === format} onClick={() => setFormat(k)} title={`${f.label} · ${f.ratio}`}>{f.label}</button>
+          ))}
         </div>
-      )}
-
-      {!missing && (
-        <div className="preview-size">
-          <span className="muted small">Preview every product as</span>
-          <div className="seg">
-            {Object.entries(view.formats).map(([k, f]) => (
-              <button key={k} className={k === format ? "on" : ""} aria-pressed={k === format} onClick={() => setFormat(k)} title={`${f.label} · ${f.ratio}`}>{f.label}</button>
-            ))}
-          </div>
-        </div>
-      )}
-      {!missing && langs.map((lang) => <LanguageCard key={lang} lang={lang} format={format} />)}
+      </div>
+      {langs.map((lang) => view.copy[lang]
+        ? <LanguageCard key={lang} lang={lang} format={format} />
+        : <TranslatingCard key={lang} lang={lang} />)}
       </div>
 
       <aside className="sticky">
@@ -63,6 +58,31 @@ export default function MessageStep() {
       </aside>
       </div>
     </>
+  );
+}
+
+/** A language whose line is on its way: the same card, shimmering, until the translation lands. */
+function TranslatingCard({ lang }: { lang: string }) {
+  const { view, errors } = useApp();
+  const failed = !!errors["translate"];
+  return (
+    <section className="card card-pad lang-row" aria-busy={!failed}>
+      <div className="lang-head">
+        <h3>{LANGUAGE_NAMES[lang]}</h3>
+        <span className="muted small">{view.brief.markets.filter((m) => m.language === lang).map((m) => m.name).join(", ")}</span>
+      </div>
+      {failed ? <ErrorNote k="translate" action="Translate again" /> : (
+        <>
+          <div className="working-line" role="status">
+            <Loader2 size={18} className="spin" />
+            <span><b>Translating…</b> adapting the line for {LANGUAGE_NAMES[lang]}, not just swapping words.</span>
+          </div>
+          <div className="lang-previews f-1x1" style={{ "--across": Math.min(view.brief.products.length, 3) } as React.CSSProperties}>
+            {view.brief.products.map((p) => <div key={p.id} className="preview-wrap skeleton" style={{ aspectRatio: "1 / 1" }} />)}
+          </div>
+        </>
+      )}
+    </section>
   );
 }
 
@@ -174,7 +194,8 @@ function LanguageCard({ lang, format }: { lang: string; format: string }) {
           return (
             <figure key={p.id} className="lang-preview">
               <div className={`preview-wrap ${loading ? "loading" : ""}`} style={{ aspectRatio: `${spec.size[0]} / ${spec.size[1]}` }}>
-                {r && <img src={r.image} alt={`${p.name}, ${LANGUAGE_NAMES[lang]}`} />}
+                {r ? <img src={r.image} alt={`${p.name}, ${LANGUAGE_NAMES[lang]}`} />
+                  : <div className="preview-pending"><Loader2 size={20} className="spin" /></div>}
                 {r && <Markers checks={r.checks.filter((c) => WORD_CHECKS.includes(c.id))} />}
               </div>
               <figcaption>{p.name}</figcaption>

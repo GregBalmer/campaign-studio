@@ -129,7 +129,7 @@ export default function ReviewStep() {
           })}
           {shown.length === 0 && (
             <div className="empty">
-              {{ all: "No ads yet.", open: "Nothing left to review. Every ad has a decision.",
+              {{ all: "No ads yet.", open: "Nothing left to review.",
                  approved: "No ads approved yet.", rejected: "No ads rejected." }[filter]}
               {filter !== "all" && <><br /><button className="btn btn-ghost btn-sm" style={{ marginTop: 10 }} onClick={() => setFilter("all")}>Show all ads</button></>}
             </div>
@@ -150,7 +150,7 @@ export default function ReviewStep() {
             detail={passingOpen.length > 0 ? `${passingOpen.length} pass every check and can be approved together.${flaggedOpen ? ` ${flaggedOpen} flagged need a closer look first.` : ""}`
               : flaggedOpen > 0 ? `${flaggedOpen} flagged ${flaggedOpen === 1 ? "ad needs" : "ads need"} a closer look. Click ${flaggedOpen === 1 ? "it" : "one"} to decide.`
               : open > 0 ? `${open} still ${open === 1 ? "needs" : "need"} a decision.`
-              : "Every ad has a decision."}>
+              : undefined}>
             {passingOpen.length > 0 ? (
               <Button kind="primary" size="lg" className="btn-block" icon={<CheckCheck size={18} />} busy={busy.has("bulk")} onClick={approveAllPassing}>
                 Approve all that pass ({passingOpen.length})
@@ -172,9 +172,10 @@ export default function ReviewStep() {
               )
             )}
             <ErrorNote k="azure" />
-            {view.has_outputs && (
-              <a className="summary-link" href={`/api/campaigns/${view.id}/download${passingOpen.length > 0 && counts.approved ? "?only=approved" : ""}`}>
-                {passingOpen.length > 0 && counts.approved ? `Or download the ${counts.approved} approved so far` : `Download all ${counts.total} ads`}
+            {/* The other download, as a quiet button. Hidden once every ad is approved: it'd be the same file. */}
+            {view.has_outputs && counts.approved < counts.total && (
+              <a className="btn btn-secondary btn-block" href={`/api/campaigns/${view.id}/download${passingOpen.length > 0 && counts.approved ? "?only=approved" : ""}`}>
+                {passingOpen.length > 0 && counts.approved ? `Download the ${counts.approved} approved so far` : `Download all ${counts.total} ads`}
               </a>
             )}
           </NextPanel>

@@ -209,7 +209,8 @@ img { display: block; max-width: 100%; }
 .label-action.btn-sm:hover { color: var(--action-hover); }
 .field-note .label-action.btn-sm { margin: -2px -8px 0 0; }
 button.link:disabled { opacity: 0.5; cursor: default; }
-button.link { padding: 0; border: 0; background: none; color: var(--action); font: inherit; cursor: pointer; text-decoration: underline; text-underline-offset: 2px; }
+button.link { padding: 0; border: 0; background: none; color: var(--action); font: inherit; font-weight: 550; cursor: pointer; text-decoration: none; }
+button.link:hover { color: var(--action-hover); }
 .input, .textarea {
   width: 100%; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   background: var(--surface); padding: 11px 13px; font-size: 15px; line-height: 1.45;
@@ -716,3 +717,15 @@ button.connect-link { border: 0; background: none; padding: 0; cursor: pointer; 
 button.connect-link:hover { text-decoration: underline; }
 .summary-panel .btn-block + .btn-block { margin-top: 10px; }
 .sent-line { display: flex; align-items: center; justify-content: center; gap: 6px; margin: 2px 0 0; font-size: 13.5px; font-weight: 550; color: var(--ok); }
+
+/* Loading on the Message step: a working line, then cards that shimmer until the words and ads arrive. */
+.working-line { display: flex; align-items: center; gap: 10px; margin: 0 0 14px; padding: 14px 16px; border-radius: 12px; background: var(--surface); border: 1px solid var(--line); color: var(--ink-2); font-size: 14px; }
+.working-line .spin { color: var(--action); flex: none; }
+.skeleton, .skeleton-line, .preview-pending {
+  background: linear-gradient(110deg, #ece8e1 8%, #f7f5f1 18%, #ece8e1 33%); background-size: 200% 100%; animation: shimmer 1.4s linear infinite;
+}
+.skeleton-line { height: 22px; width: 55%; border-radius: 6px; margin: 4px 0 16px; }
+.preview-pending { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-3); }
+
+/* Links in the app read as links by colour, not underline. */
+a { text-decoration: none; }
