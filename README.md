@@ -246,7 +246,7 @@ samples/team.json     the demo people, copied to workspace/team.json on first ru
 tools/team.py         add, list or remove the people who can sign in
 tools/fake_firefly.py a stand-in for Adobe's servers, for testing Firefly with no account
 tools/test_firefly.py the Firefly adapter's tests (offline)
-tools/                smoke_test.py (fresh-install test used by CI), sample-asset scripts, a contact-sheet helper
+tools/                smoke_test.py (fresh-install test used by CI), screenshots.py (retakes the README screenshots), sample-asset scripts, a contact-sheet helper
 .github/workflows/    fresh-install.yml: the Windows / macOS / Linux test
 ```
 
